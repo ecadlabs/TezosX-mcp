@@ -1,15 +1,50 @@
 {
-  "name": "tezos-wallet-mcp",
+  "name": "tezosx-mcp",
   "version": "1.0.0",
-  "description": "",
+  "description": "MCP server for Tezos wallet operations",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "frontend/dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx tsc"
+    "build": "npx tsc",
+    "build:frontend": "cd frontend && npm run build",
+    "build:all": "npm run build:frontend && npm run build",
+    "prepublishOnly": "npm run build:all"
   },
+  "keywords": [
+    "mcp",
+    "tezos",
+    "wallet",
+    "taquito",
+    "blockchain",
+    "model-context-protocol"
+  ],
   "author": "ECAD Labs",
-  "license": "ISC",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ecadlabs/TezosX-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ecadlabs/TezosX-mcp/issues"
+  },
+  "homepage": "https://github.com/ecadlabs/TezosX-mcp#readme",
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.23.0",
     "@taquito/signer": "^23.0.3",
@@ -17,7 +52,9 @@
     "axios": "^1.13.2",
     "node-fetch": "^3.3.2",
     "sirv": "^3.0.2",
-    "typescript": "^5.9.3",
     "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }
