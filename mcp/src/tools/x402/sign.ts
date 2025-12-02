@@ -48,8 +48,11 @@ export async function signX402Payment(
 	const branch = block.hash;
 
 	// Get the counter for the source account
-	const counter = await Tezos.rpc.getContract(source);
-	const nextCounter = (parseInt(counter.counter || "0") + 1).toString();
+	const contractInfo = await Tezos.rpc.getContract(source);
+	if (!contractInfo) {
+		throw new Error(`Failed to get contract info for ${source}. Account may not exist on chain.`);
+	}
+	const nextCounter = (parseInt(contractInfo.counter || "0") + 1).toString();
 
 	// Build the transfer operation
 	const operation: ForgeParams = {

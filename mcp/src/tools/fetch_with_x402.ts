@@ -76,7 +76,7 @@ export const createFetchWithX402Tool = (
 				: initialResponse.data;
 			x402Response = X402ResponseSchema.parse(responseData);
 		} catch (error) {
-			throw new Error(`Failed to parse x402 response: ${error}`);
+			throw new Error(`Failed to parse x402 response: ${error instanceof Error ? error.message : error}`);
 		}
 
 		// Find Tezos payment requirement
@@ -132,7 +132,12 @@ export const createFetchWithX402Tool = (
 			},
 		};
 
-		const paidResponse = await axios(paidConfig);
+		let paidResponse;
+		try {
+			paidResponse = await axios(paidConfig);
+		} catch (error) {
+			throw new Error(`Payment signed but request failed: ${error instanceof Error ? error.message : error}`);
+		}
 
 		const decimals = tezosRequirement.extra?.decimals ?? 6;
 		const amountFormatted = requiredAmount / Math.pow(10, decimals);
