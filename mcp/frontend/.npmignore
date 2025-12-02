@@ -1,0 +1,7 @@
+# Only ignore node_modules, not dist
+node_modules/
+src/
+contract/
+*.json
+*.ts
+!dist/

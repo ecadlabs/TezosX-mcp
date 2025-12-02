@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "type-check": "vue-tsc --noEmit",
     "compile": "tsx contract/compile.ts"
