@@ -28,7 +28,7 @@ export const createGetBalanceTool = (
 				content: [{ type: "text" as const, text: `Spending address balance: ${spendingAddressBalance} mutez. Spending contract balance: ${spendingContractBalance} mutez` }]
 			};
 		} catch (error) {
-			throw new ReferenceError(`${error}`)
+			throw new Error(`Failed to get balance: ${error instanceof Error ? error.message : error}`)
 		}
 	}
 });

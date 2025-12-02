@@ -177,9 +177,9 @@ export const useContractStore = defineStore('contract', () => {
     }
   }
 
-  function clearDeploymentResult(): void {
+  async function clearDeploymentResult(): Promise<void> {
     if (deploymentResult.value) {
-      setContractAddress(deploymentResult.value.contractAddress)
+      await setContractAddress(deploymentResult.value.contractAddress)
       deploymentResult.value = null
     }
   }

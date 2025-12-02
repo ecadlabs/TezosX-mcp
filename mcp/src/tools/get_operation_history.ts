@@ -74,7 +74,7 @@ export const createGetOperationHistoryTool = (spendingContract: string, tzktApi:
 				content: [{ type: "text" as const, text: summary }],
 			};
 		} catch (error) {
-			throw new ReferenceError(`Failed to fetch operation history: ${error}`);
+			throw new Error(`Failed to fetch operation history: ${error instanceof Error ? error.message : error}`);
 		}
 	},
 });
