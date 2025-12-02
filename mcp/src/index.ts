@@ -7,6 +7,9 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createTools } from "./tools/index.js";
 
+// Webserver
+import { startWebServer } from "./webserver.js";
+
 // Network configurations
 const NETWORKS = {
 	mainnet: {
@@ -22,12 +25,16 @@ const NETWORKS = {
 type NetworkName = keyof typeof NETWORKS;
 
 const init = async () => {
+	// Start web server for frontend
+	const webPort = parseInt(process.env.WEB_PORT || "13205", 10);
+	startWebServer(webPort);
+
 	const server = new McpServer({
-		name: "tezos-wallet-mcp",
+		name: "tezosx-mcp",
 		version: "1.0.0"
 	});
 
-	
+
 
 	// Network configuration
 	const networkName = (process.env.TEZOS_NETWORK || 'mainnet') as NetworkName;
