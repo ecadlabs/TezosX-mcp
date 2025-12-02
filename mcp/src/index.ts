@@ -9,6 +9,7 @@ import { createTools } from "./tools/index.js";
 
 // Webserver
 import { startWebServer } from "./webserver.js";
+export const DEFAULT_WEB_PORT = '13205';
 
 // Network configurations
 const NETWORKS = {
@@ -26,7 +27,7 @@ type NetworkName = keyof typeof NETWORKS;
 
 const init = async () => {
 	// Start web server for frontend
-	const webPort = parseInt(process.env.WEB_PORT || "13205", 10);
+	const webPort = parseInt(process.env.WEB_PORT || DEFAULT_WEB_PORT, 10);
 	startWebServer(webPort);
 
 	const server = new McpServer({

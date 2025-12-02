@@ -48,7 +48,7 @@ export const useWalletStore = defineStore('wallet', () => {
     const beaconNetwork = getBeaconNetworkConfig(network)
 
     wallet.value = new BeaconWallet({
-      name: 'Spending Wallet',
+      name: 'TezosX MCP',
       network: beaconNetwork as any,
     })
 

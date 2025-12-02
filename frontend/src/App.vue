@@ -27,8 +27,30 @@ async function handleNetworkChange(event: Event): Promise<void> {
 }
 
 onMounted(async () => {
+  const params = new URLSearchParams(window.location.search)
+
+  // Handle network param before wallet init
+  const networkParam = params.get('network')?.toLowerCase()
+  if (networkParam && networkParam in NETWORKS) {
+    await walletStore.switchNetwork(networkParam as NetworkId)
+  }
+
   await walletStore.init()
-  if (contractStore.contractAddress) {
+
+  // Handle contract param
+  const contractParam = params.get('contract')
+  if (contractParam) {
+    await contractStore.setContractAddress(contractParam)
+    // Clear URL params on success
+    if (contractStore.contractAddress) {
+      params.delete('contract')
+      params.delete('network')
+      const newUrl = params.toString()
+        ? `${window.location.pathname}?${params}`
+        : window.location.pathname
+      window.history.replaceState({}, '', newUrl)
+    }
+  } else if (contractStore.contractAddress) {
     await contractStore.loadContract()
   }
 })
@@ -43,7 +65,7 @@ onMounted(async () => {
       <!-- Header -->
       <header class="mb-6 flex items-center justify-between">
         <h1 class="text-3xl font-semibold tracking-tight text-text-primary">
-          Tezos MCP Configuration
+          TezosX MCP Configuration
         </h1>
         <select
           :value="walletStore.networkId"
@@ -68,7 +90,7 @@ onMounted(async () => {
       />
 
       <!-- Setup Section (when no contract) -->
-      <SetupSection v-if="walletStore.isConnected && !contractStore.contractAddress && !contractStore.deploymentResult" />
+      <SetupSection v-if="!contractStore.contractAddress && !contractStore.deploymentResult" />
 
       <!-- Contract Dashboard -->
       <template v-if="contractStore.contractAddress && contractStore.storage">

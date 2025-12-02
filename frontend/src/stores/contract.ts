@@ -55,6 +55,10 @@ export const useContractStore = defineStore('contract', () => {
 
   // Actions
   async function setContractAddress(address: string): Promise<void> {
+    if (!address || !address.startsWith('KT1')) {
+      error.value = 'Invalid contract address. Must start with KT1.'
+      return
+    }
     contractAddress.value = address
     localStorage.setItem('contractAddress', address)
     await loadContract()
@@ -84,7 +88,7 @@ export const useContractStore = defineStore('contract', () => {
     } catch (err) {
       console.error('Failed to load contract:', err)
       error.value = err instanceof Error ? err.message : 'Failed to load contract'
-      throw err
+      clearContractAddress()
     } finally {
       isLoading.value = false
     }

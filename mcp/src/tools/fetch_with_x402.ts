@@ -3,6 +3,7 @@ import z from "zod";
 import axios, { AxiosRequestConfig } from "axios";
 import { X402ResponseSchema } from "./x402/types.js";
 import { signX402Payment } from "./x402/sign.js";
+import { ensureRevealed } from "./reveal_account.js";
 
 export const createFetchWithX402Tool = (
 	Tezos: TezosToolkit,
@@ -111,6 +112,9 @@ export const createFetchWithX402Tool = (
 				`Available: ${sourceBalance.toNumber()} mutez`
 			);
 		}
+
+		// Ensure account is revealed before signing
+		await ensureRevealed(Tezos);
 
 		// Sign the payment using shared utility
 		const signed = await signX402Payment(Tezos, {

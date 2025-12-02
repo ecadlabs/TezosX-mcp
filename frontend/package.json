@@ -16,7 +16,8 @@
     "@taquito/taquito": "^21.0.0",
     "@taquito/utils": "^21.0.0",
     "pinia": "^3.0.4",
-    "vue": "^3.4.21"
+    "vue": "^3.4.21",
+    "vue-router": "^4.6.3"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0-beta.8",

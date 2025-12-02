@@ -6,7 +6,9 @@ import { createGetBalanceTool } from "./get_balance.js";
 import { createGetLimitsTool } from "./get_limits.js";
 import { createGetOperationHistoryTool } from "./get_operation_history.js";
 import { createParseX402RequirementsTool } from "./parse_x402_requirements.js";
+import { createRevealAccountTool } from "./reveal_account.js";
 import { createSendXtzTool } from "./send_xtz.js";
+import { createGetDashboardTool } from "./get_dashboard.js";
 
 export const createTools = (Tezos: TezosToolkit, spendingContract: string, spendingAddress: string, tzktApi: string) => [
 	createCreateX402PaymentTool(Tezos),
@@ -16,5 +18,7 @@ export const createTools = (Tezos: TezosToolkit, spendingContract: string, spend
 	createGetLimitsTool(Tezos, spendingContract),
 	createGetOperationHistoryTool(spendingContract, tzktApi),
 	createParseX402RequirementsTool(),
+	createRevealAccountTool(Tezos),
 	createSendXtzTool(Tezos, spendingContract, spendingAddress),
+	createGetDashboardTool(spendingContract),
 ]

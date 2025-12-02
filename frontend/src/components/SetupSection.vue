@@ -61,9 +61,24 @@ async function handleOriginate(): Promise<void> {
   }
 }
 
+function normalizeContractInput(input: string): string {
+  // If it looks like a URL, try to extract contract param
+  if (input.includes('://') || input.includes('?contract=')) {
+    try {
+      const url = new URL(input, window.location.origin)
+      const contract = url.searchParams.get('contract')
+      if (contract) return contract
+    } catch {
+      // Not a valid URL, continue with original input
+    }
+  }
+  return input.trim()
+}
+
 async function handleConnectContract(): Promise<void> {
   if (!existingContractAddress.value) return
-  await contractStore.setContractAddress(existingContractAddress.value)
+  const address = normalizeContractInput(existingContractAddress.value)
+  await contractStore.setContractAddress(address)
   existingContractAddress.value = ''
 }
 </script>
@@ -94,11 +109,11 @@ async function handleConnectContract(): Promise<void> {
 
         <button
           @click="handleOriginate"
-          :disabled="isDeploying || contractStore.isLoading"
+          :disabled="!walletStore.isConnected || isDeploying || contractStore.isLoading"
           class="btn-primary w-full flex items-center justify-center gap-2"
         >
           <span v-if="isDeploying || contractStore.isLoading" class="spinner"></span>
-          {{ isDeploying || contractStore.isLoading ? 'Deploying...' : 'Deploy Contract' }}
+          {{ !walletStore.isConnected ? 'Connect Wallet to Deploy' : isDeploying || contractStore.isLoading ? 'Deploying...' : 'Deploy Contract' }}
         </button>
       </div>
     </div>
