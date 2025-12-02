@@ -1,0 +1,327 @@
+// FA2 NFT Contract for x402 Payment Receipts
+// TZIP-12 (FA2) compliant with dynamic minting for authorized minters
+//
+// Compile: npm run compile
+
+// =============================================================================
+// Types
+// =============================================================================
+
+// FA2 Standard Types
+type token_id = nat;
+
+type transfer_destination = {
+  to_: address,
+  token_id: token_id,
+  amount: nat
+};
+
+type transfer_item = {
+  from_: address,
+  txs: list<transfer_destination>
+};
+
+type balance_request = {
+  owner: address,
+  token_id: token_id
+};
+
+type balance_response = {
+  request: balance_request,
+  balance: nat
+};
+
+type operator_param = {
+  owner: address,
+  operator: address,
+  token_id: token_id
+};
+
+type operator_update =
+  | ["Add_operator", operator_param]
+  | ["Remove_operator", operator_param];
+
+// TZIP-12 token metadata record
+type token_metadata_value = {
+  token_id: token_id,
+  token_info: map<string, bytes>
+};
+
+// Contract Storage
+type storage = {
+  admin: address,
+  minters: set<address>,
+  ledger: big_map<token_id, address>,
+  operators: big_map<[address, address, token_id], unit>,
+  token_metadata: big_map<token_id, token_metadata_value>,
+  metadata: big_map<string, bytes>,
+  next_token_id: nat
+};
+
+// Return type
+type result = [list<operation>, storage];
+
+// =============================================================================
+// Error Messages (FA2 Standard)
+// =============================================================================
+
+const fa2_token_undefined = "FA2_TOKEN_UNDEFINED";
+const fa2_not_operator = "FA2_NOT_OPERATOR";
+const fa2_insufficient_balance = "FA2_INSUFFICIENT_BALANCE";
+const fa2_not_owner = "FA2_NOT_OWNER";
+
+// Custom errors
+const not_admin = "NOT_ADMIN";
+const not_minter = "NOT_MINTER";
+const invalid_amount = "FA2_INVALID_AMOUNT";
+
+// =============================================================================
+// Helper Functions
+// =============================================================================
+
+// Check if caller is admin
+const is_admin = (s: storage): bool => Tezos.get_sender() == s.admin;
+
+// Check if caller is authorized minter
+const is_minter = (s: storage): bool => Set.mem(Tezos.get_sender(), s.minters);
+
+// Check if token exists
+const token_exists = (token_id: token_id, s: storage): bool =>
+  Big_map.mem(token_id, s.ledger);
+
+// Get token owner (fails if not exists)
+const get_owner = (token_id: token_id, s: storage): address =>
+  match(Big_map.find_opt(token_id, s.ledger)) {
+    when(Some(owner)): owner;
+    when(None): failwith(fa2_token_undefined)
+  };
+
+// Check if address is owner or operator for a token
+const is_authorized = (from_: address, token_id: token_id, s: storage): bool => {
+  const sender = Tezos.get_sender();
+  if (sender == from_) {
+    return true;
+  };
+  return Big_map.mem([from_, sender, token_id], s.operators);
+};
+
+// =============================================================================
+// FA2 Entrypoints
+// =============================================================================
+
+// Transfer tokens
+// For NFTs: amount must be exactly 1, and sender must be owner or operator
+@entry
+const transfer = (transfers: list<transfer_item>, s: storage): result => {
+  const process_transfer = ([ledger, item]: [big_map<token_id, address>, transfer_item]): big_map<token_id, address> => {
+    const from_ = item.from_;
+
+    const process_tx = ([l, tx]: [big_map<token_id, address>, transfer_destination]): big_map<token_id, address> => {
+      // NFTs must have amount = 1
+      if (tx.amount != 1n) {
+        return failwith(invalid_amount);
+      };
+
+      // Check token exists
+      const owner = match(Big_map.find_opt(tx.token_id, l)) {
+        when(Some(o)): o;
+        when(None): failwith(fa2_token_undefined)
+      };
+
+      // Check sender owns the token
+      if (owner != from_) {
+        return failwith(fa2_insufficient_balance);
+      };
+
+      // Check authorization
+      if (!is_authorized(from_, tx.token_id, s)) {
+        return failwith(fa2_not_operator);
+      };
+
+      // Update ledger
+      return Big_map.update(tx.token_id, Some(tx.to_), l);
+    };
+
+    return List.fold(process_tx, item.txs, ledger);
+  };
+
+  const new_ledger = List.fold(process_transfer, transfers, s.ledger);
+  return [list([]), { ...s, ledger: new_ledger }];
+};
+
+// Query token balances
+// Returns 1 if owner matches ledger, 0 otherwise
+@entry
+const balance_of = (params: { requests: list<balance_request>, callback: contract<list<balance_response>> }, s: storage): result => {
+  const get_balance = (request: balance_request): balance_response => {
+    const balance: nat = match(Big_map.find_opt(request.token_id, s.ledger)) {
+      when(Some(owner)): owner == request.owner ? 1n : 0n;
+      when(None): 0n  // Non-existent tokens have 0 balance
+    };
+    return { request, balance };
+  };
+
+  const responses = List.map(get_balance, params.requests);
+  const op = Tezos.Next.Operation.transaction(responses, 0mutez, params.callback);
+  return [list([op]), s];
+};
+
+// Update operators
+// Only token owner can add/remove operators for their tokens
+@entry
+const update_operators = (updates: list<operator_update>, s: storage): result => {
+  const process_update = ([ops, update]: [big_map<[address, address, token_id], unit>, operator_update]): big_map<[address, address, token_id], unit> => {
+    const param = match(update) {
+      when(Add_operator(p)): p;
+      when(Remove_operator(p)): p
+    };
+
+    // Only owner can update operators
+    if (Tezos.get_sender() != param.owner) {
+      return failwith(fa2_not_owner);
+    };
+
+    const key: [address, address, token_id] = [param.owner, param.operator, param.token_id];
+
+    return match(update) {
+      when(Add_operator(_)): Big_map.update(key, Some(unit), ops);
+      when(Remove_operator(_)): Big_map.remove(key, ops)
+    };
+  };
+
+  const new_operators = List.fold(process_update, updates, s.operators);
+  return [list([]), { ...s, operators: new_operators }];
+};
+
+// =============================================================================
+// Minting Entrypoint
+// =============================================================================
+
+// Mint a new NFT
+// Only callable by authorized minters
+// Creates token with auto-incremented ID and stores metadata URI
+// Note: metadata_uri should be raw UTF-8 bytes of the URI (e.g., "ipfs://Qm...")
+@entry
+const mint = (params: { recipient: address, metadata_uri: bytes }, s: storage): result => {
+  // Check caller is authorized minter
+  if (!is_minter(s)) {
+    return failwith(not_minter);
+  };
+
+  const token_id = s.next_token_id;
+
+  // Create TZIP-12 compliant token metadata
+  // Empty string key "" points to the metadata URI (TZIP-21 format)
+  const token_info: map<string, bytes> = Map.literal([
+    ["", params.metadata_uri]
+  ]);
+
+  const token_meta: token_metadata_value = {
+    token_id: token_id,
+    token_info: token_info
+  };
+
+  // Update storage
+  const new_ledger = Big_map.add(token_id, params.recipient, s.ledger);
+  const new_token_metadata = Big_map.add(token_id, token_meta, s.token_metadata);
+  const new_next_id = token_id + 1n;
+
+  return [
+    list([]),
+    {
+      ...s,
+      ledger: new_ledger,
+      token_metadata: new_token_metadata,
+      next_token_id: new_next_id
+    }
+  ];
+};
+
+// =============================================================================
+// Admin Entrypoints
+// =============================================================================
+
+// Add a new minter address
+@entry
+const add_minter = (minter: address, s: storage): result => {
+  if (!is_admin(s)) {
+    return failwith(not_admin);
+  };
+  return [list([]), { ...s, minters: Set.add(minter, s.minters) }];
+};
+
+// Remove a minter address
+@entry
+const remove_minter = (minter: address, s: storage): result => {
+  if (!is_admin(s)) {
+    return failwith(not_admin);
+  };
+  return [list([]), { ...s, minters: Set.remove(minter, s.minters) }];
+};
+
+// Transfer admin role to new address
+@entry
+const set_admin = (new_admin: address, s: storage): result => {
+  if (!is_admin(s)) {
+    return failwith(not_admin);
+  };
+  return [list([]), { ...s, admin: new_admin }];
+};
+
+// =============================================================================
+// Views (TZIP-16)
+// =============================================================================
+
+// Get balance of owner for a token (1 if owner, 0 otherwise)
+@view
+const get_balance = ([owner, token_id]: [address, token_id], s: storage): nat =>
+  match(Big_map.find_opt(token_id, s.ledger)) {
+    when(Some(o)): o == owner ? 1n : 0n;
+    when(None): 0n
+  };
+
+// Get total number of tokens minted
+@view
+const total_supply = (_: unit, s: storage): nat => s.next_token_id;
+
+// Check if operator is approved for owner's token
+@view
+const is_operator = ([owner, operator, token_id]: [address, address, token_id], s: storage): bool =>
+  Big_map.mem([owner, operator, token_id], s.operators);
+
+// Get token owner (returns option to avoid failure)
+@view
+const get_token_owner = (token_id: token_id, s: storage): option<address> =>
+  Big_map.find_opt(token_id, s.ledger);
+
+// Get token metadata
+@view
+const get_token_metadata = (token_id: token_id, s: storage): option<token_metadata_value> =>
+  Big_map.find_opt(token_id, s.token_metadata);
+
+// =============================================================================
+// Initial Storage Helper
+// =============================================================================
+
+// Generate initial storage with given admin address
+const initial_storage = (admin: address): storage => {
+  // Contract metadata following TZIP-16
+  // Raw UTF-8 bytes (not Michelson-packed) for indexer compatibility
+  // "tezos-storage:content" as hex bytes
+  const metadata_uri: bytes = 0x74657a6f732d73746f726167653a636f6e74656e74;
+  // {"name":"x402 Payment Receipts","version":"1.0.0","interfaces":["TZIP-012","TZIP-016","TZIP-021"]} as hex
+  const contract_metadata: bytes = 0x7b226e616d65223a2278343032205061796d656e74205265636569707473222c2276657273696f6e223a22312e302e30222c22696e7465726661636573223a5b22545a49502d303132222c22545a49502d303136222c22545a49502d303231225d7d;
+
+  return {
+    admin: admin,
+    minters: Set.empty,
+    ledger: Big_map.empty,
+    operators: Big_map.empty,
+    token_metadata: Big_map.empty,
+    metadata: Big_map.literal([
+      ["", metadata_uri],
+      ["content", contract_metadata]
+    ]),
+    next_token_id: 0n
+  };
+};

@@ -1,0 +1,22 @@
+{
+	"name": "tezos-x402-nft-worker",
+	"version": "1.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"start": "wrangler dev",
+		"cf-typegen": "wrangler types"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.8.19",
+		"@cloudflare/workers-types": "^4.20241127.0",
+		"typescript": "^5.5.2",
+		"wrangler": "^4.51.0"
+	},
+	"dependencies": {
+		"@taquito/signer": "^21.0.0",
+		"@taquito/taquito": "^21.0.0",
+		"@taquito/utils": "^21.0.0"
+	}
+}

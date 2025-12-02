@@ -35,7 +35,7 @@ npm start
 | Environment Variable | Description | Default |
 |---------------------|-------------|---------|
 | `PORT` | HTTP server port | `3000` |
-| `TEZOS_RPC_URL` | Tezos RPC endpoint URL | `https://ghostnet.tezos.ecadinfra.com` |
+| `TEZOS_RPC_URL` | Tezos RPC endpoint URL | `https://shadownet.tezos.ecadinfra.com` |
 
 ## API Endpoints
 
@@ -47,8 +47,8 @@ Returns service status and connected network.
 ```json
 {
   "status": "ok",
-  "network": "ghostnet",
-  "rpcUrl": "https://ghostnet.tezos.ecadinfra.com",
+  "network": "shadownet",
+  "rpcUrl": "https://shadownet.tezos.ecadinfra.com",
   "connectedBlock": "BL..."
 }
 ```
@@ -62,7 +62,7 @@ Validates an x402 payment payload against requirements.
 {
   "payload": {
     "scheme": "exact-tezos",
-    "network": "ghostnet",
+    "network": "shadownet",
     "asset": "XTZ",
     "payload": {
       "operationBytes": "...",
@@ -73,7 +73,7 @@ Validates an x402 payment payload against requirements.
   },
   "requirements": {
     "scheme": "exact-tezos",
-    "network": "ghostnet",
+    "network": "shadownet",
     "asset": "XTZ",
     "amount": "250000",
     "recipient": "tz1..."
@@ -105,7 +105,7 @@ Injects a previously verified payment to the Tezos network.
 {
   "payload": {
     "scheme": "exact-tezos",
-    "network": "ghostnet",
+    "network": "shadownet",
     "asset": "XTZ",
     "payload": {
       "operationBytes": "...",

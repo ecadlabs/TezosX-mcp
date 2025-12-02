@@ -1,0 +1,21 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "tezos-x402-nft",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-12-02",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true
+	},
+	"vars": {
+		"NETWORK": "shadownet",
+		"PAYMENT_AMOUNT": "000001"
+	}
+	// Secrets (set via `wrangler secret put`):
+	// - TEZOS_RPC_URL
+	// - MINTER_PRIVATE_KEY
+	// - NFT_CONTRACT
+	// - PAYMENT_RECIPIENT
+	// - FACILITATOR_URL
+	// - PINATA_JWT
+}
