@@ -27,6 +27,8 @@ const init = async () => {
 		version: "1.0.0"
 	});
 
+	
+
 	// Network configuration
 	const networkName = (process.env.TEZOS_NETWORK || 'mainnet') as NetworkName;
 	const network = NETWORKS[networkName];

@@ -1,0 +1,19 @@
+{
+  "name": "tezosx-mcp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "run": ""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ecadlabs/TezosX-mcp.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ecadlabs/TezosX-mcp/issues"
+  },
+  "homepage": "https://github.com/ecadlabs/TezosX-mcp#readme"
+}
