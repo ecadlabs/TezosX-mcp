@@ -1,10 +1,21 @@
 # TezosX MCP
 
+A Model Context Protocol server for Tezos with x402 payment support.
+
+## Components
+
+| Component | Description | Deployment |
+|-----------|-------------|------------|
+| **MCP Server** | Tezos wallet tools for AI agents | Claude Desktop / Railway |
+| **Facilitator** | Verifies & settles x402 payments | Cloudflare Worker |
+| **Mint Worker** | Mints NFT receipts via x402 | Cloudflare Worker |
+| **NFT Contract** | FA2 contract for collector cards | Tezos blockchain |
+
 ## Deployment
 
-### 1. MCP Server (Claude Desktop)
+### 1. MCP Server
 
-Add to your Claude Desktop config (`claude_desktop_config.json`):
+**Claude Desktop** - Add to `claude_desktop_config.json`:
 
 ```json
 {
@@ -22,70 +33,84 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 }
 ```
 
+The server runs in HTTP mode when `MCP_TRANSPORT=http`.
+
+The frontend runs automatically.
+
 | Variable | Description |
 |----------|-------------|
 | `TEZOS_NETWORK` | `mainnet` or `shadownet` |
-| `SPENDING_PRIVATE_KEY` | Private key for the spending account |
-| `WEB_PORT` | (Optional) Frontend port, default `13205` |
+| `SPENDING_CONTRACT` | Spending limit contract address |
+| `SPENDING_PRIVATE_KEY` | Private key (edsk/spsk/p2sk) |
+| `MCP_TRANSPORT` | `stdio` (default) or `http` |
+| `WEB_PORT` | Frontend port (default: 13205) |
 
-The frontend runs automatically on localhost when the MCP server starts. No separate deployment is required.
-
-### 2. Facilitator
-
-The facilitator verifies and settles x402 payments. Run it on a server accessible to your mint worker.
+### 2. Facilitator (Cloudflare Worker)
 
 ```bash
 cd facilitator
 npm install
-npm run build
-npm start
-```
-
-Create `facilitator/.env`:
-```
-TEZOS_RPC_URL=https://shadownet.tezos.ecadinfra.com
-```
-
-### 3. NFT Contract
-
-Deploy the FA2 NFT contract and authorize the minter:
-
-```bash
-cd mint
-npm install
-
-# Set in .env: TEZOS_RPC_URL, ADMIN_PRIVATE_KEY
-npm run deploy -- --minter tz1...minter_address
-```
-
-This outputs the `NFT_CONTRACT` address to use in the mint worker.
-
-### 4. NFT Mint Worker (Cloudflare)
-
-Deploy the Cloudflare Worker that mints NFTs via x402:
-
-```bash
-cd mint/worker
-npm install
-wrangler deploy
-```
-
-Set secrets via wrangler:
-```bash
-wrangler secret put TEZOS_RPC_URL        # RPC endpoint
-wrangler secret put MINTER_PRIVATE_KEY   # Minter's edsk... key
-wrangler secret put NFT_CONTRACT         # KT1... contract address
-wrangler secret put PAYMENT_RECIPIENT    # tz1... receives payments
-wrangler secret put FACILITATOR_URL      # URL to your facilitator
-wrangler secret put PINATA_JWT           # Pinata API JWT for IPFS
+npm run deploy
 ```
 
 Configure `wrangler.jsonc`:
 ```jsonc
 {
   "vars": {
-    "NETWORK": "mainnet",
-    "PAYMENT_AMOUNT": "100000"  // 0.1 XTZ in mutez
+    "TEZOS_RPC_URL": "https://shadownet.tezos.ecadinfra.com"
   }
 }
 ```
+
+### 3. NFT Contract
+
+Deploy the FA2 contract and authorize a minter:
+
+```bash
+cd mint
+npm install
+npm run deploy -- --minter tz1...
+```
+
+### 4. Mint Worker (Cloudflare Worker)
+
+```bash
+cd mint/worker
+npm install
+npm run deploy
+```
+
+Set secrets:
+```bash
+wrangler secret put TEZOS_RPC_URL
+wrangler secret put MINTER_PRIVATE_KEY
+wrangler secret put NFT_CONTRACT
+wrangler secret put PAYMENT_RECIPIENT
+wrangler secret put PINATA_JWT
+```
+
+Configure `wrangler.jsonc`:
+```jsonc
+{
+  "vars": {
+    "NETWORK": "shadownet",
+    "PAYMENT_AMOUNT": "100000"
+  },
+  "services": [
+    { "binding": "FACILITATOR", "service": "tezos-x402-facilitator" }
+  ]
+}
+```
+
+The mint worker uses a service binding to call the facilitator directly (no public URL needed).
+
+## API Endpoints
+
+**Mint Worker** (`/`):
+- Returns 402 with payment requirements if no `X-PAYMENT` header
+- Verifies payment, mints NFT, returns token details on success
+
+**Facilitator**:
+- `POST /verify` - Verify a payment payload
+- `POST /settle` - Settle a verified payment
+- `GET /health` - Health check

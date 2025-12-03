@@ -5,9 +5,10 @@ export interface Env {
 	NFT_CONTRACT: string;
 	PAYMENT_RECIPIENT: string;
 	PAYMENT_AMOUNT: string;
-	FACILITATOR_URL: string;
 	PINATA_JWT: string;
 	NETWORK: string;
+	// Service binding to facilitator worker
+	FACILITATOR: Fetcher;
 }
 
 // x402 Types

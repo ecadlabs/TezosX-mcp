@@ -97,6 +97,8 @@ export async function handleMint(
 	env: Env,
 	ctx: ExecutionContext
 ): Promise<Response> {
+	console.log("[mint] Request received:", request.method, request.url);
+
 	// Parse recipient from query params or body
 	let recipientOverride: string | null = null;
 
@@ -114,6 +116,7 @@ export async function handleMint(
 
 	// Validate recipient override if provided
 	if (recipientOverride && !isValidTezosAddress(recipientOverride)) {
+		console.log("[mint] Invalid recipient address:", recipientOverride);
 		return errorResponse(
 			`Invalid recipient address: ${recipientOverride}`,
 			"INVALID_REQUEST",
@@ -125,14 +128,23 @@ export async function handleMint(
 	const paymentHeader = request.headers.get("X-PAYMENT");
 
 	if (!paymentHeader) {
+		console.log("[mint] No X-PAYMENT header, returning 402");
 		return paymentRequiredResponse(env);
 	}
+
+	console.log("[mint] X-PAYMENT header present, decoding...");
 
 	// Decode payment payload
 	let paymentPayload: X402PaymentPayload;
 	try {
 		paymentPayload = decodePaymentHeader(paymentHeader);
+		console.log("[mint] Payment decoded:", {
+			network: paymentPayload.network,
+			scheme: paymentPayload.scheme,
+			source: paymentPayload.payload?.source,
+		});
 	} catch (error) {
+		console.error("[mint] Failed to decode payment:", error);
 		return errorResponse(
 			error instanceof Error ? error.message : "Invalid X-PAYMENT header",
 			"INVALID_PAYMENT",
@@ -142,6 +154,7 @@ export async function handleMint(
 
 	// Verify network matches
 	if (paymentPayload.network !== env.NETWORK) {
+		console.log("[mint] Network mismatch:", paymentPayload.network, "vs", env.NETWORK);
 		return errorResponse(
 			`Wrong network: expected ${env.NETWORK}, got ${paymentPayload.network}`,
 			"WRONG_NETWORK",
@@ -150,14 +163,18 @@ export async function handleMint(
 	}
 
 	// Verify payment with facilitator
+	console.log("[mint] Verifying payment with facilitator:", env.FACILITATOR_URL);
 	const verification = await verifyPayment(paymentPayload, env);
 
 	if (!verification.valid) {
+		console.log("[mint] Verification failed:", verification.reason);
 		return paymentRequiredResponse(
 			env,
 			verification.reason || "Payment verification failed"
 		);
 	}
+
+	console.log("[mint] Payment verified successfully, payer:", verification.payer);
 
 	// Determine recipient (override or payer)
 	const payerAddress = verification.payer || paymentPayload.payload.source;
@@ -166,8 +183,11 @@ export async function handleMint(
 	// Get next token ID for metadata
 	let tokenId: number;
 	try {
+		console.log("[mint] Getting next token ID...");
 		tokenId = await getNextTokenId(env);
+		console.log("[mint] Next token ID:", tokenId);
 	} catch (error) {
+		console.error("[mint] Failed to get token ID:", error);
 		return errorResponse(
 			`Failed to get token ID: ${error instanceof Error ? error.message : "Unknown error"}`,
 			"MINT_FAILED",
@@ -179,13 +199,17 @@ export async function handleMint(
 	const amountXTZ = (parseInt(env.PAYMENT_AMOUNT, 10) / 1_000_000).toFixed(6);
 
 	// Generate SVG receipt image
+	console.log("[mint] Generating SVG...");
 	const svg = generateReceiptSVG(tokenId, amountXTZ, payerAddress, timestamp);
 
 	// Upload SVG to IPFS first
 	let imageUri: string;
 	try {
+		console.log("[mint] Uploading SVG to IPFS...");
 		imageUri = await uploadSvgToIPFS(svg, `x402-receipt-${tokenId}`, env);
+		console.log("[mint] SVG uploaded:", imageUri);
 	} catch (error) {
+		console.error("[mint] SVG upload failed:", error);
 		return errorResponse(
 			`SVG upload failed: ${error instanceof Error ? error.message : "Unknown error"}`,
 			"IPFS_UPLOAD_FAILED",
@@ -207,8 +231,11 @@ export async function handleMint(
 	// Upload metadata to IPFS
 	let metadataUri: string;
 	try {
+		console.log("[mint] Uploading metadata to IPFS...");
 		metadataUri = await uploadMetadataToIPFS(metadata, env);
+		console.log("[mint] Metadata uploaded:", metadataUri);
 	} catch (error) {
+		console.error("[mint] Metadata upload failed:", error);
 		return errorResponse(
 			`Metadata upload failed: ${error instanceof Error ? error.message : "Unknown error"}`,
 			"IPFS_UPLOAD_FAILED",
@@ -219,8 +246,11 @@ export async function handleMint(
 	// Mint the NFT
 	let mintResult;
 	try {
+		console.log("[mint] Minting NFT to:", recipientAddress);
 		mintResult = await mintNFT(env, recipientAddress, metadataUri);
+		console.log("[mint] NFT minted:", mintResult.opHash);
 	} catch (error) {
+		console.error("[mint] Mint failed:", error);
 		return errorResponse(
 			`Mint failed: ${error instanceof Error ? error.message : "Unknown error"}`,
 			"MINT_FAILED",
@@ -229,10 +259,13 @@ export async function handleMint(
 	}
 
 	// Settle payment in background (don't block response)
+	console.log("[mint] Starting background settlement...");
 	ctx.waitUntil(
 		settlePayment(paymentPayload, env).then((settled) => {
-			if (!settled) {
-				console.error("Payment settlement failed (NFT was minted)");
+			if (settled) {
+				console.log("[mint] Payment settled successfully");
+			} else {
+				console.error("[mint] Payment settlement failed (NFT was minted)");
 			}
 		})
 	);
@@ -252,5 +285,6 @@ export async function handleMint(
 		},
 	};
 
+	console.log("[mint] Success! Token ID:", mintResult.tokenId);
 	return jsonResponse(response, 200);
 }

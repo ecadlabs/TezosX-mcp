@@ -6,7 +6,8 @@
  * then mints an NFT receipt to the payer.
  *
  * Endpoints:
- *   GET/POST /mint - Mint an NFT (requires x402 payment)
+ *   GET/POST / - Mint an NFT (requires x402 payment)
+ *   GET /health - Health check
  *
  * Environment variables (secrets):
  *   TEZOS_RPC_URL      - Tezos RPC endpoint
@@ -45,8 +46,24 @@ export default {
 			});
 		}
 
-		// Route handling
-		if (path === "/mint" || path === "/mint/") {
+		// Health check endpoint
+		if (path === "/health") {
+			return new Response(
+				JSON.stringify({
+					status: "ok",
+					service: "tezos-x402-nft",
+					network: env.NETWORK,
+					contract: env.NFT_CONTRACT,
+				}),
+				{
+					status: 200,
+					headers: { "Content-Type": "application/json" },
+				}
+			);
+		}
+
+		// Root path handles minting
+		if (path === "/" || path === "") {
 			if (request.method === "GET" || request.method === "POST") {
 				const response = await handleMint(request, env, ctx);
 
@@ -69,22 +86,6 @@ export default {
 					Allow: "GET, POST, OPTIONS",
 				},
 			});
-		}
-
-		// Health check endpoint
-		if (path === "/" || path === "/health") {
-			return new Response(
-				JSON.stringify({
-					status: "ok",
-					service: "tezos-x402-nft",
-					network: env.NETWORK,
-					contract: env.NFT_CONTRACT,
-				}),
-				{
-					status: 200,
-					headers: { "Content-Type": "application/json" },
-				}
-			);
 		}
 
 		// 404 for unknown routes

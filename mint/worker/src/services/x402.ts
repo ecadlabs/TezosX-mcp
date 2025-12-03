@@ -54,7 +54,7 @@ export function decodePaymentHeader(header: string): X402PaymentPayload {
 }
 
 /**
- * Verify payment with the facilitator
+ * Verify payment with the facilitator (via service binding)
  */
 export async function verifyPayment(
 	payload: X402PaymentPayload,
@@ -70,7 +70,10 @@ export async function verifyPayment(
 		};
 	}
 
-	const response = await fetch(`${env.FACILITATOR_URL}/verify`, {
+	console.log("[x402] Calling facilitator /verify via service binding");
+
+	// Use service binding to call facilitator directly (avoids public routing)
+	const response = await env.FACILITATOR.fetch("https://facilitator/verify", {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -80,6 +83,8 @@ export async function verifyPayment(
 			requirements: requirement,
 		}),
 	});
+
+	console.log("[x402] Facilitator response status:", response.status);
 
 	if (!response.ok) {
 		const errorText = await response.text();
@@ -100,14 +105,15 @@ export async function verifyPayment(
 }
 
 /**
- * Settle the payment with the facilitator (fire and forget)
+ * Settle the payment with the facilitator (via service binding, fire and forget)
  */
 export async function settlePayment(
 	payload: X402PaymentPayload,
 	env: Env
 ): Promise<boolean> {
 	try {
-		const response = await fetch(`${env.FACILITATOR_URL}/settle`, {
+		console.log("[x402] Calling facilitator /settle via service binding");
+		const response = await env.FACILITATOR.fetch("https://facilitator/settle", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -115,8 +121,10 @@ export async function settlePayment(
 			body: JSON.stringify({ payload }),
 		});
 
+		console.log("[x402] Settle response status:", response.status);
 		return response.ok;
-	} catch {
+	} catch (error) {
+		console.error("[x402] Settle failed:", error);
 		return false;
 	}
 }

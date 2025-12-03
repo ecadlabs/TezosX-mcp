@@ -10,12 +10,18 @@
 	"vars": {
 		"NETWORK": "shadownet",
 		"PAYMENT_AMOUNT": "000001"
-	}
+	},
+	// Service binding to facilitator worker (avoids worker-to-worker routing issues)
+	"services": [
+		{
+			"binding": "FACILITATOR",
+			"service": "tezos-x402-facilitator"
+		}
+	]
 	// Secrets (set via `wrangler secret put`):
 	// - TEZOS_RPC_URL
 	// - MINTER_PRIVATE_KEY
 	// - NFT_CONTRACT
 	// - PAYMENT_RECIPIENT
-	// - FACILITATOR_URL
 	// - PINATA_JWT
 }
