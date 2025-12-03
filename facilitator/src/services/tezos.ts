@@ -11,12 +11,12 @@ const DEFAULT_RPC_URL = 'https://shadownet.tezos.ecadinfra.com';
 const CONFIRMATION_POLL_INTERVAL = 5000; // 5 seconds
 const MAX_CONFIRMATION_ATTEMPTS = 60; // 5 minutes max wait
 
-class TezosService {
+export class TezosService {
   private tezos: TezosToolkit;
   private rpcUrl: string;
 
-  constructor() {
-    this.rpcUrl = process.env.TEZOS_RPC_URL || DEFAULT_RPC_URL;
+  constructor(rpcUrl?: string) {
+    this.rpcUrl = rpcUrl || DEFAULT_RPC_URL;
     this.tezos = new TezosToolkit(this.rpcUrl);
   }
 
@@ -61,7 +61,7 @@ class TezosService {
   ): Promise<{ sufficient: boolean; balance: bigint }> {
     const balance = await this.getBalance(address);
     console.log(balance);
-    
+
     return {
       sufficient: balance >= requiredAmount,
       balance,
@@ -119,7 +119,7 @@ class TezosService {
             // Block might not exist yet, continue
           }
         }
-      } catch (error) {
+      } catch {
         // RPC error, continue polling
       }
 
@@ -135,5 +135,9 @@ class TezosService {
   }
 }
 
-// Singleton instance
-export const tezosService = new TezosService();
+/**
+ * Create a TezosService instance
+ */
+export function createTezosService(rpcUrl?: string): TezosService {
+  return new TezosService(rpcUrl);
+}

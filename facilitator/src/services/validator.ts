@@ -8,6 +8,7 @@
 import {
   verifySignature,
   b58cencode,
+  b58cdecode,
   prefix,
   getPkhfromPk,
 } from '@taquito/utils';
@@ -19,7 +20,7 @@ import {
   DecodedOperation,
   DecodedTransaction,
 } from '../types/x402';
-import { tezosService } from './tezos';
+import { TezosService } from './tezos';
 import { seenOperations } from '../storage/seen';
 
 // Estimated fees buffer for balance check (0.01 XTZ = 10000 mutez)
@@ -35,12 +36,32 @@ export interface ValidationResult {
 const forger = new LocalForger();
 
 /**
+ * Convert hex string to Uint8Array
+ */
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+  }
+  return bytes;
+}
+
+/**
+ * Convert Uint8Array to hex string
+ */
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/**
  * Compute the operation hash from operation bytes
  */
 function computeOperationHash(operationBytes: string): string {
   // The operation hash is the b58check encoding of the blake2b hash
   // of the operation bytes with the 'o' prefix
-  const bytes = Buffer.from(operationBytes, 'hex');
+  const bytes = hexToBytes(operationBytes);
   const hashed = hash(bytes, 32);
   return b58cencode(hashed, prefix.o);
 }
@@ -62,8 +83,12 @@ export function validateSignature(
       };
     }
 
-    if (!signature.startsWith('edsig') && !signature.startsWith('spsig') &&
-        !signature.startsWith('p2sig') && !signature.startsWith('sig')) {
+    if (
+      !signature.startsWith('edsig') &&
+      !signature.startsWith('spsig') &&
+      !signature.startsWith('p2sig') &&
+      !signature.startsWith('sig')
+    ) {
       return {
         valid: false,
         reason: `Invalid signature format: must start with edsig, spsig, p2sig, or sig. Got: ${signature.substring(0, 10)}...`,
@@ -112,7 +137,11 @@ export function validatePublicKeySource(
       };
     }
 
-    if (!publicKey.startsWith('edpk') && !publicKey.startsWith('sppk') && !publicKey.startsWith('p2pk')) {
+    if (
+      !publicKey.startsWith('edpk') &&
+      !publicKey.startsWith('sppk') &&
+      !publicKey.startsWith('p2pk')
+    ) {
       return {
         valid: false,
         reason: `Invalid public key format: must start with edpk, sppk, or p2pk. Got: ${publicKey.substring(0, 10)}...`,
@@ -208,7 +237,8 @@ export function validateOperationAgainstRequirements(
  */
 export async function validatePayment(
   payload: TezosPayloadData,
-  requirements: X402Requirements
+  requirements: X402Requirements,
+  tezosService: TezosService
 ): Promise<ValidationResult> {
   // Step 1: Validate public key matches source
   const pkValidation = validatePublicKeySource(payload.publicKey, payload.source);
@@ -292,27 +322,23 @@ export function combineOperationWithSignature(
   operationBytes: string,
   signature: string
 ): string {
-  // Convert signature from base58 to hex
-  const { b58cdecode, prefix } = require('@taquito/utils');
-
   // Decode the signature - signatures use different prefixes based on curve
-  let sigHex: string;
+  let sigBytes: Uint8Array;
 
   if (signature.startsWith('edsig')) {
-    const decoded = b58cdecode(signature, prefix.edsig);
-    sigHex = Buffer.from(decoded).toString('hex');
+    sigBytes = b58cdecode(signature, prefix.edsig);
   } else if (signature.startsWith('spsig')) {
-    const decoded = b58cdecode(signature, prefix.spsig);
-    sigHex = Buffer.from(decoded).toString('hex');
+    sigBytes = b58cdecode(signature, prefix.spsig);
   } else if (signature.startsWith('p2sig')) {
-    const decoded = b58cdecode(signature, prefix.p2sig);
-    sigHex = Buffer.from(decoded).toString('hex');
+    sigBytes = b58cdecode(signature, prefix.p2sig);
   } else if (signature.startsWith('sig')) {
-    const decoded = b58cdecode(signature, prefix.sig);
-    sigHex = Buffer.from(decoded).toString('hex');
+    sigBytes = b58cdecode(signature, prefix.sig);
   } else {
     throw new Error(`Unsupported signature format: ${signature.substring(0, 10)}`);
   }
+
+  // Convert to hex and combine
+  const sigHex = bytesToHex(sigBytes);
 
   // Combine operation bytes with signature
   return operationBytes + sigHex;
