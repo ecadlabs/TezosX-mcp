@@ -18,7 +18,7 @@ export function generateReceiptSVG(
     </linearGradient>
   </defs>
   <rect width="100%" height="100%" fill="url(#bg)"/>
-  <text x="200" y="80" text-anchor="middle" fill="#0f4c75" font-family="monospace" font-size="20" font-weight="bold">x402 PAYMENT RECEIPT</text>
+  <text x="200" y="80" text-anchor="middle" fill="#0f4c75" font-family="monospace" font-size="20" font-weight="bold">x402 COLLECTORS CARD</text>
   <text x="200" y="160" text-anchor="middle" fill="#fff" font-family="monospace" font-size="48">#${paddedId}</text>
   <text x="200" y="220" text-anchor="middle" fill="#3282b8" font-family="monospace" font-size="24">${amountXTZ} XTZ</text>
   <text x="200" y="280" text-anchor="middle" fill="#666" font-family="monospace" font-size="14">${payerShort}</text>

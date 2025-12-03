@@ -71,8 +71,8 @@ function buildMetadata(
 	const amountXTZ = (parseInt(amountMutez, 10) / 1_000_000).toFixed(6);
 
 	return {
-		name: `x402 Payment Receipt #${tokenId}`,
-		description: "Proof of payment via x402 protocol on Tezos",
+		name: `x402 Collectors Card #${tokenId}`,
+		description: "Proof of making a payment via x402 protocol on Tezos",
 		artifactUri: imageUri,
 		displayUri: imageUri,
 		thumbnailUri: imageUri,

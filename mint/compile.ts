@@ -29,7 +29,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Load environment variables from parent .env file
-config({ path: join(__dirname, "../.env") });
+config({ path: join(__dirname, ".env") });
 
 // Parse arguments
 const shouldDeploy = process.argv.includes("--deploy");
