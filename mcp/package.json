@@ -22,7 +22,8 @@
     "build": "npx tsc",
     "build:frontend": "cd frontend && npm run build",
     "build:all": "npm run build:frontend && npm run build",
-    "prepublishOnly": "npm run build:all"
+    "prepublishOnly": "npm run build:all",
+    "start": "node dist/index.js"
   },
   "keywords": [
     "mcp",
@@ -50,11 +51,13 @@
     "@taquito/signer": "^23.0.3",
     "@taquito/taquito": "^23.0.3",
     "axios": "^1.13.2",
+    "express": "^5.2.1",
     "node-fetch": "^3.3.2",
     "sirv": "^3.0.2",
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "typescript": "^5.9.3"
   }
 }

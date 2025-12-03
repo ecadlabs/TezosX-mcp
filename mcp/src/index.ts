@@ -7,8 +7,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createTools } from "./tools/index.js";
 
+// MCP hosted
+import express from 'express';
+
 // Webserver
 import { startWebServer } from "./webserver.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 export const DEFAULT_WEB_PORT = '13205';
 
 // Network configurations
@@ -75,8 +79,35 @@ const init = async () => {
 		server.registerTool(tool.name, tool.config, tool.handler);
 	});
 
-	const transport = new StdioServerTransport();
-	await server.connect(transport);
+	const transport = process.env.MCP_TRANSPORT || 'stdio';
+
+	if (transport === 'http') {
+		const app = express();
+		app.use(express.json());
+
+		// Dashboard frontend
+		app.use('/', express.static('public'));
+
+		// MCP endpoint
+		app.post('/mcp', async (req, res) => {
+			const httpTransport = new StreamableHTTPServerTransport({
+				sessionIdGenerator: undefined,
+				enableJsonResponse: true
+			});
+			res.on('close', () => httpTransport.close());
+			await server.connect(httpTransport);
+			await httpTransport.handleRequest(req, res, req.body);
+		});
+
+		const port = process.env.PORT || 3004;
+		app.listen(port, () => {
+			console.error(`MCP server (HTTP) at http://localhost:${port}/mcp`);
+		});
+
+	} else {
+		const stdioTransport = new StdioServerTransport();
+		await server.connect(stdioTransport);
+	}
 }
 
 init();
