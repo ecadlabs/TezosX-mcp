@@ -1,4 +1,7 @@
-# TezosX MCP
+# TezosX MCP - ALPHA
+
+# Warning: This MCP is in alpha. Most things should work, but please be prepared for troubleshooting. Please report any problems on our issues page.
+## As always, verify the output of your LLM before approving any transactions. Set reasonable limits. Trust but verify. 
 
 A Model Context Protocol server for Tezos with x402 payment support.
 
