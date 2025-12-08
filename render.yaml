@@ -1,6 +1,7 @@
 services:
   - type: web
     name: tezosx-mcp
+    plan: free
     runtime: node
     rootDir: mcp
     buildCommand: npm install --include=dev && npm run build
