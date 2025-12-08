@@ -19,7 +19,7 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "cd frontend && npm install",
+    "postinstall": "cd frontend && npm install --include=dev",
     "build": "cd frontend && npm run build && cd .. && npx tsc",
     "build:backend": "npx tsc",
     "build:frontend": "cd frontend && npm run build",
