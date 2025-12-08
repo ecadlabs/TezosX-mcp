@@ -19,10 +19,11 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx tsc",
+    "postinstall": "cd frontend && npm install",
+    "build": "cd frontend && npm run build && cd .. && npx tsc",
+    "build:backend": "npx tsc",
     "build:frontend": "cd frontend && npm run build",
-    "build:all": "npm run build:frontend && npm run build",
-    "prepublishOnly": "npm run build:all",
+    "prepublishOnly": "npm run build",
     "start": "node dist/index.js"
   },
   "keywords": [
@@ -51,6 +52,7 @@
     "@taquito/signer": "^23.0.3",
     "@taquito/taquito": "^23.0.3",
     "axios": "^1.13.2",
+    "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "node-fetch": "^3.3.2",
     "sirv": "^3.0.2",
