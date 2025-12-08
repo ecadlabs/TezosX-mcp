@@ -13,11 +13,27 @@ A Model Context Protocol server for Tezos with x402 payment support.
 2. Click the deployed item and go to "Settings"
 3. Scroll down to "Public Networking"
 4. Your domain will be something like `tezosx-mcp-production-a12b.up.railway.app`
-5. Navigate to your domain to open the frontend config, and get up your spending key and contract address.
+5. Navigate to your domain to open the frontend config, and set up your spending key and contract address.
 6. Back on Railway, navigate to the "Variables" tab and set `SPENDING_PRIVATE_KEY` and `SPENDING_CONTRACT` to the values you just received.
 7. Optional: Enable the 'serverless' setting to reduce resource usage.
 8. Restart the deployment.
 9. Set up your AI Platform to use `[your domain]/mcp` as the URL
+</details>
+
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ecadlabs/TezosX-mcp)
+<details>
+<summary>Deploying on Render</summary>
+
+1. Click the button above to deploy the template
+2. Once deployed, under the "Sync" click "View details"
+3. Click the hyperlink to "tezosx-mcp"
+4. Navigate to your onrender.com custom url near the top and set up your spending key and contract address.
+5. Back on Render, navigate to the "Environment" tab on the left and set `SPENDING_PRIVATE_KEY` and `SPENDING_CONTRACT` environment variables to the values you just received.
+7. Click "Manual deploy" at the top right and select "Restart service".
+8. Set up your AI Platform to use `[your domain]/mcp` as the URL
+
+Please note that Render spins down free plan services during periods of inactivity. If this happens, your LLM's next request can take up to a minute while the instance spins back up automatically. You can upgrade to a paid Render plan to avoid this.
 </details>
 
 ## Components
