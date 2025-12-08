@@ -6,6 +6,19 @@
 A Model Context Protocol server for Tezos with x402 payment support.
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/yODwUH?referralCode=SVg46H&utm_medium=integration&utm_source=template&utm_campaign=generic)
+<details>
+<summary>Deploying on Railway</summary>
+
+1. Deploy the template
+2. Click the deployed item and go to "Settings"
+3. Scroll down to "Public Networking"
+4. Your domain will be something like `tezosx-mcp-production-a12b.up.railway.app`
+5. Navigate to your domain to open the frontend config, and get up your spending key and contract address.
+6. Back on Railway, navigate to the "Variables" tab and set `SPENDING_PRIVATE_KEY` and `SPENDING_CONTRACT` to the values you just received.
+7. Optional: Enable the 'serverless' setting to reduce resource usage.
+8. Restart the deployment.
+9. Set up your AI Platform to use `[your domain]/mcp` as the URL
+</details>
 
 ## Components
 
