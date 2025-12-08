@@ -5,7 +5,7 @@
 
 A Model Context Protocol server for Tezos with x402 payment support.
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/yODwUH?referralCode=SVg46H&utm_medium=integration&utm_source=template&utm_campaign=generic)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/tezosx-mcp?referralCode=SVg46H&utm_medium=integration&utm_source=template&utm_campaign=generic)
 <details>
 <summary>Deploying on Railway</summary>
 
