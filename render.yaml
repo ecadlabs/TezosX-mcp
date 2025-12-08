@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: tezosx-mcp
+    runtime: node
+    rootDir: mcp
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    envVars:
+      - key: MCP_TRANSPORT
+        value: http
