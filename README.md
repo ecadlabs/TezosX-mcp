@@ -9,7 +9,7 @@ A Model Context Protocol server for Tezos with x402 payment support.
 <details>
 <summary>Deploying on Railway</summary>
 
-1. Deploy the template
+1. Deploy the template (if you'd like to use shadownet, set the "TEZOS_NETWORK" variable to `shadownet` before clicking deploy)
 2. Click the deployed item and go to "Settings"
 3. Scroll down to "Public Networking"
 4. Your domain will be something like `tezosx-mcp-production-a12b.up.railway.app`
