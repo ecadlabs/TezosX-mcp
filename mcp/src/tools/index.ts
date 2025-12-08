@@ -43,7 +43,7 @@ const withConfigCheck = <T extends { name: string; config: any; handler: (...arg
 	}
 });
 
-export const createTools = (walletConfig: WalletConfig, tzktApi: string) => {
+export const createTools = (walletConfig: WalletConfig, tzktApi: string, http: boolean) => {
 	// Create a mock Tezos toolkit for tool creation when config is missing
 	// The actual handlers will be blocked by withConfigCheck
 	const Tezos = walletConfig?.Tezos ?? {} as TezosToolkit;
@@ -60,8 +60,11 @@ export const createTools = (walletConfig: WalletConfig, tzktApi: string) => {
 		createParseX402RequirementsTool(),
 		createRevealAccountTool(Tezos),
 		createSendXtzTool(Tezos, spendingContract, spendingAddress),
-		createGetDashboardTool(spendingContract),
 	];
+
+	if (!http) {
+		tools.push(createGetDashboardTool(spendingContract));
+	}
 
 	// Wrap all tools with config check
 	return tools.map(tool => withConfigCheck(tool, walletConfig));

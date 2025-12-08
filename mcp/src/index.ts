@@ -107,7 +107,8 @@ const init = async () => {
 
 	// Tools
 	log('Registering tools...');
-	const tools = createTools(walletConfig, network.tzktApi);
+	const http = process.env.MCP_TRANSPORT === 'http';
+	const tools = createTools(walletConfig, network.tzktApi, http);
 	tools.forEach(tool => {
 		server.registerTool(tool.name, tool.config, tool.handler);
 	});
