@@ -1,5 +1,8 @@
 {
   "name": "tezosx-mcp",
-  "main": "./mcp/src/index.ts",
+  "main": "./mcp/dist/index.js",
   "compatibility_date": "2025-12-09",
+  "vars": {
+	"MCP_TRANSPORT": "http"
+  }
 }
