@@ -40,14 +40,6 @@ Note: Render spins down free plan services during inactivity. The next request c
 
 </details>
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ecadlabs/TezosX-mcp/tree/main/mcp)
-<details>
-<summary>Cloudflare deployment steps</summary>
-
-//
-
-</details>
-
 ## Components
 
 | Component | Description | Deployment |
