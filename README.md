@@ -25,7 +25,6 @@ A Model Context Protocol server for Tezos with x402 payment support.
 </details>
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ecadlabs/TezosX-mcp)
-
 <details>
 <summary>Render deployment steps</summary>
 
@@ -38,6 +37,14 @@ A Model Context Protocol server for Tezos with x402 payment support.
 7. Set up your AI Platform to use `[your domain]/mcp` as the URL
 
 Note: Render spins down free plan services during inactivity. The next request can take up to a minute while the instance spins back up. Upgrade to a paid plan to avoid this.
+
+</details>
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ecadlabs/TezosX-mcp)
+<details>
+<summary>Cloudflare deployment steps</summary>
+
+//
 
 </details>
 
