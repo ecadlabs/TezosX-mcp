@@ -9,6 +9,7 @@ import { createGetOperationHistoryTool } from "./get_operation_history.js";
 import { createParseX402RequirementsTool } from "./parse_x402_requirements.js";
 import { createRevealAccountTool } from "./reveal_account.js";
 import { createSendXtzTool } from "./send_xtz.js";
+import { createDepositXtzTool } from "./deposit_xtz.js";
 import { createGetDashboardTool } from "./get_dashboard.js";
 
 const getNotConfiguredMessage = () => `Wallet not configured. Please set the following environment variables and restart the MCP server:
@@ -60,6 +61,7 @@ export const createTools = (walletConfig: WalletConfig, tzktApi: string, http: b
 		createParseX402RequirementsTool(),
 		createRevealAccountTool(Tezos),
 		createSendXtzTool(Tezos, spendingContract, spendingAddress),
+		createDepositXtzTool(Tezos, spendingContract, spendingAddress),
 	];
 
 	if (!http) {
