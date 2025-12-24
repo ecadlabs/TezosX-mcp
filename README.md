@@ -97,7 +97,7 @@ Or run from source:
       "command": "node",
       "args": ["/path/to/TezosX-mcp/mcp/dist/index.js"],
       "env": {
-        "TEZOS_NETWORK": "shadownet",
+        "TEZOS_NETWORK": "mainnet",
         "SPENDING_CONTRACT": "KT1...",
         "SPENDING_PRIVATE_KEY": "edsk..."
       }
