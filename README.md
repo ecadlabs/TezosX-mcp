@@ -87,6 +87,9 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 
 Or run from source:
 
+1. Clone the TezosX-mcp repository
+2. In the `/TezosX-mcp/mcp` folder run `npm i && npm run build`
+
 ```json
 {
   "mcpServers": {
