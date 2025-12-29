@@ -74,7 +74,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
   "mcpServers": {
     "tezos": {
       "command": "npx",
-      "args": ["tezosx-mcp"],
+      "args": ["-y", "tezosx-mcp"],
       "env": {
         "TEZOS_NETWORK": "mainnet",
         "SPENDING_CONTRACT": "KT1...",
