@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "MCP server for Tezos wallet operations",
   "main": "dist/index.js",
+  "bin": {
+    "tezosx-mcp": "./dist/index.js"
+  },
   "types": "dist/index.d.ts",
   "type": "module",
   "exports": {
@@ -19,7 +22,7 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "cd frontend && npm install --include=dev 1>&2",
+    "postinstall": "test -f frontend/package.json && cd frontend && npm install --include=dev 1>&2 || true",
     "build": "cd frontend && npm run build && cd .. && npx tsc",
     "build:backend": "npx tsc",
     "build:frontend": "cd frontend && npm run build",
@@ -53,6 +56,7 @@
     "@taquito/signer": "^23.0.3",
     "@taquito/taquito": "^23.0.3",
     "axios": "^1.13.2",
+    "bn.js": "^5.2.2",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "node-fetch": "^3.3.2",

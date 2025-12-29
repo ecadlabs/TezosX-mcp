@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 export const DEFAULT_WEB_PORT = '13205';
 
 import { config } from 'dotenv';
