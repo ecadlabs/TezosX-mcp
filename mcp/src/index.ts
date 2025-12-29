@@ -19,7 +19,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { fileURLToPath } from "url";
 import { join } from "path";
 
-config();
+config({ quiet: true });
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 // Global error handlers
