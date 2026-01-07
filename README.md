@@ -56,13 +56,13 @@ Note: Render spins down free plan services during inactivity. The next request c
 ### Installation
 
 ```bash
-npm install tezosx-mcp
+npm install @ecadlabs/tezosx-mcp
 ```
 
 Or run directly:
 
 ```bash
-npx tezosx-mcp
+npx @ecadlabs/tezosx-mcp
 ```
 
 ### Claude Desktop Configuration
@@ -74,7 +74,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
   "mcpServers": {
     "tezos": {
       "command": "npx",
-      "args": ["-y", "tezosx-mcp"],
+      "args": ["-y", "@ecadlabs/tezosx-mcp"],
       "env": {
         "TEZOS_NETWORK": "mainnet",
         "SPENDING_CONTRACT": "KT1...",

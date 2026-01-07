@@ -1,5 +1,5 @@
 {
-  "name": "tezosx-mcp",
+  "name": "@ecadlabs/tezosx-mcp",
   "version": "1.0.0",
   "description": "MCP server for Tezos wallet operations",
   "main": "dist/index.js",
