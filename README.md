@@ -76,7 +76,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
       "command": "npx",
       "args": ["-y", "@ecadlabs/tezosx-mcp"],
       "env": {
-        "TEZOS_NETWORK": "mainnet",
+        "TEZOS_NETWORK": "mainnet"
       }
     }
   }
