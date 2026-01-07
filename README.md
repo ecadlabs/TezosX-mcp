@@ -77,8 +77,6 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
       "args": ["-y", "@ecadlabs/tezosx-mcp"],
       "env": {
         "TEZOS_NETWORK": "mainnet",
-        "SPENDING_CONTRACT": "KT1...",
-        "SPENDING_PRIVATE_KEY": "edsk..."
       }
     }
   }
