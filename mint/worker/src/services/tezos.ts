@@ -1,8 +1,7 @@
 import { TezosToolkit } from "@taquito/taquito";
 import { InMemorySigner } from "@taquito/signer";
-import { char2Bytes } from "@taquito/utils";
+import { stringToBytes } from "@taquito/utils";
 import type { Env, MintResult } from "../types/index.js";
-import { BigNumber } from "bignumber.js";
 
 interface NFTStorage {
 	next_token_id: BigNumber;
@@ -53,7 +52,7 @@ export async function mintNFT(
 
 	// Convert metadata URI string to bytes (raw UTF-8, not packed)
 	// This is required for TZIP-12/TZIP-21 compliance
-	const metadataBytes = char2Bytes(metadataUri);
+	const metadataBytes = stringToBytes(metadataUri);
 
 	// Call mint entrypoint with bytes
 	const op = await contract.methodsObject
