@@ -11,13 +11,13 @@ export const createFetchWithX402Tool = (
 	name: "tezos_fetch_with_x402",
 	config: {
 		title: "Fetch with x402 Payment",
-		description: "Fetches a URL and automatically handles x402 payment requirements. If the server returns 402, it parses the requirements, creates a signed payment, and retries the request with the X-PAYMENT header. IMPORTANT: For NFT minting endpoints, always set 'recipient' to the user's wallet address so they receive the NFT (not the spending account).",
+		description: "Fetches a URL and automatically handles x402 payment requirements. If the server returns 402, it parses the requirements, creates a signed payment, and retries the request with the X-PAYMENT header. WARNING: For NFT minting endpoints (URLs containing '/mint' or otherwise going to a minter), you MUST set 'nftRecipientAddress' to the user's wallet address, otherwise the NFT will be sent to the spender account instead of the user.",
 		inputSchema: z.object({
 			url: z.string().describe("The URL to fetch"),
 			maxAmountMutez: z.string().describe("Maximum amount in mutez willing to pay (e.g., '500000' for 0.5 XTZ)"),
 			method: z.string().optional().describe("HTTP method (default: GET)"),
 			body: z.string().optional().describe("Request body for POST/PUT requests"),
-			recipient: z.string().optional().describe("Address to receive any minted assets (NFTs). IMPORTANT: For /mint endpoints, set this to the user's wallet address. If omitted, defaults to the spending account (payer), which is usually not desired."),
+			nftRecipientAddress: z.string().optional().describe("REQUIRED FOR MINTING: The user's wallet address (tz1...) to receive minted NFTs. If omitted, NFTs go to the spender account, not the user."),
 		}),
 		annotations: {
 			readOnlyHint: false,
@@ -27,12 +27,12 @@ export const createFetchWithX402Tool = (
 		}
 	},
 	handler: async (params: any) => {
-		const { url, maxAmountMutez, method = "GET", body, recipient } = params as {
+		const { url, maxAmountMutez, method = "GET", body, nftRecipientAddress } = params as {
 			url: string;
 			maxAmountMutez: string;
 			method?: string;
 			body?: string;
-			recipient?: string;
+			nftRecipientAddress?: string;
 		};
 
 		const maxAmount = parseInt(maxAmountMutez, 10);
@@ -42,9 +42,9 @@ export const createFetchWithX402Tool = (
 
 		// Build URL with recipient parameter if specified
 		let requestUrl = url;
-		if (recipient) {
+		if (nftRecipientAddress) {
 			const urlObj = new URL(url);
-			urlObj.searchParams.set("recipient", recipient);
+			urlObj.searchParams.set("recipient", nftRecipientAddress);
 			requestUrl = urlObj.toString();
 		}
 
