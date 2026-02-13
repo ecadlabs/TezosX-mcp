@@ -163,7 +163,7 @@ watch(() => contractStore.storage?.spender, () => {
           />
           <button
             @click="handleFundContract"
-            :disabled="isFundingContract || !contractFundAmount"
+            :disabled="isFundingContract || isFundingSpender || !contractFundAmount"
             class="btn-primary flex items-center gap-2 h-[38px] w-fit px-2"
           >
             <span v-if="isFundingContract" class="spinner !w-4 !h-4"></span>
@@ -229,7 +229,7 @@ watch(() => contractStore.storage?.spender, () => {
             />
             <button
               @click="handleFundSpender"
-              :disabled="isFundingSpender || !spenderFundAmount"
+              :disabled="isFundingSpender || isFundingContract || !spenderFundAmount"
               class="btn-secondary !py-1 !px-2 text-xs flex items-center gap-1"
             >
               <span v-if="isFundingSpender" class="spinner spinner-dark !w-3 !h-3"></span>
