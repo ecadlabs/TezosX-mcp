@@ -5,7 +5,7 @@ import type { Keypair } from '@/types'
 
 const props = defineProps<{
   keypair: Keypair
-  addressLabel?: string
+  secretLabel?: string
 }>()
 
 const copyFeedback = ref('')
@@ -34,27 +34,11 @@ function downloadKeypair(): void {
 </script>
 
 <template>
-  <!-- Spender Address -->
-  <div class="mb-3">
-    <label class="label">{{ addressLabel ?? 'spender address' }}</label>
-    <div class="flex items-center gap-2">
-      <code class="mono bg-white px-2 py-1.5 rounded flex-1 break-all text-sm border border-amber-200">
-        {{ keypair.address }}
-      </code>
-      <button
-        @click="handleCopy(keypair.address, 'address')"
-        class="btn-secondary !py-1.5 !px-2 text-xs"
-      >
-        {{ copyFeedback === 'address' ? 'Copied!' : 'Copy' }}
-      </button>
-    </div>
-  </div>
-
   <!-- Secret Key -->
   <div class="mb-4">
-    <label class="label">secret key</label>
-    <div class="flex items-center gap-2">
-      <code class="mono bg-error/5 text-error/80 px-2 py-1.5 rounded flex-1 break-all text-sm border border-red-200">
+    <label class="label">{{ secretLabel ?? 'secret key' }}</label>
+    <div class="flex items-stretch gap-2">
+      <code class="mono bg-error/5 text-error/80 px-2 py-1.5 rounded flex-1 break-all text-sm border border-red-200 flex items-center">
         {{ showSecret ? keypair.secretKey : keypair.secretKey.slice(0, 4) + '\u2022'.repeat(24) }}
       </code>
       <button
