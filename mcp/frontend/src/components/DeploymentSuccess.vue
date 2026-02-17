@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { copyToClipboard } from '@/utils'
 import type { Keypair } from '@/types'
+import KeypairDisplay from './KeypairDisplay.vue'
 
 defineProps<{
   contractAddress: string
@@ -13,30 +14,11 @@ const emit = defineEmits<{
 }>()
 
 const copyFeedback = ref('')
-const secretKeyCopied = ref(false)
 
 async function handleCopy(text: string, label: string): Promise<void> {
   await copyToClipboard(text)
   copyFeedback.value = label
-  if (label === 'secret') {
-    secretKeyCopied.value = true
-  }
   setTimeout(() => { copyFeedback.value = '' }, 2000)
-}
-
-function downloadKeypair(keypair: Keypair): void {
-  const data = JSON.stringify(keypair, null, 2)
-  const blob = new Blob([data], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `spending-keypair-${keypair.address.slice(0, 8)}.json`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-
-  URL.revokeObjectURL(url)
 }
 </script>
 
@@ -81,48 +63,7 @@ function downloadKeypair(keypair: Keypair): void {
         You'll need the secret key to configure your MCP server.
       </p>
 
-      <!-- Spender Address -->
-      <div class="mb-3">
-        <label class="label">spender address</label>
-        <div class="flex items-center gap-2">
-          <code class="mono bg-white px-2 py-1.5 rounded flex-1 break-all text-sm border border-amber-200">
-            {{ keypair.address }}
-          </code>
-          <button
-            @click="handleCopy(keypair.address, 'address')"
-            class="btn-secondary !py-1.5 !px-2 text-xs"
-          >
-            {{ copyFeedback === 'address' ? 'Copied!' : 'Copy' }}
-          </button>
-        </div>
-      </div>
-
-      <!-- Secret Key -->
-      <div class="mb-4">
-        <label class="label">secret key</label>
-        <div class="flex items-center gap-2">
-          <code class="mono bg-error/5 text-error/80 px-2 py-1.5 rounded flex-1 break-all text-sm border border-red-200">
-            {{ keypair.secretKey }}
-          </code>
-          <button
-            @click="handleCopy(keypair.secretKey, 'secret')"
-            class="btn-secondary !py-1.5 !px-2 text-xs"
-          >
-            {{ copyFeedback === 'secret' ? 'Copied!' : 'Copy' }}
-          </button>
-        </div>
-      </div>
-
-      <!-- Download Button -->
-      <button
-        @click="downloadKeypair(keypair)"
-        class="btn-secondary w-full flex items-center justify-center gap-2"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-        </svg>
-        Download Keypair JSON
-      </button>
+      <KeypairDisplay :keypair="keypair" />
     </div>
 
     <!-- Continue Button -->
