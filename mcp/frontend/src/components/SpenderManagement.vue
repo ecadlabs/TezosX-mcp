@@ -62,13 +62,7 @@ function handleDone(): void {
 
 <template>
   <section class="card p-5 mb-5">
-    <p class="section-label mb-4">spender management</p>
-
-    <!-- Current Spender -->
-    <div class="card-subtle p-3 mb-4">
-      <p class="label">current spender</p>
-      <p class="mono text-sm text-text-primary break-all">{{ contractStore.storage?.spender }}</p>
-    </div>
+    <p class="section-label mb-4">spender key management</p>
 
     <!-- Success State: Show new keypair -->
     <NewSpenderSuccess
