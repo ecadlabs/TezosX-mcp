@@ -66,6 +66,10 @@ function buildMcpConfig(maskKey: boolean): string {
       <p class="text-sm text-amber-700 mb-4">
         You'll need both values below to configure your MCP server. Save them now — the spending key won't be shown again.
       </p>
+      <p class="text-sm text-amber-700 mb-4">
+        This is <strong>not</strong> your wallets private key. The spending key is a separate key that only authorizes the MCP server to spend from this contract, within the limits you configure.
+        You can revoke it at any time from the dashboard.
+      </p>
 
       <!-- Contract Address -->
       <div class="mb-3">
