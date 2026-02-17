@@ -1,5 +1,6 @@
 import { TezosToolkit } from "@taquito/taquito";
 import z from "zod";
+import { ensureRevealed } from "./reveal_account.js";
 
 // Constants
 const MUTEZ_PER_TEZ = 1_000_000;
@@ -69,6 +70,10 @@ export const createSendXtzTool = (
 				`Available: ${formatMutez(contractBalance.toNumber())}`
 			);
 		}
+
+		// Taquito auto-reveals on send(), but the estimate step below
+		// simulates via RPC without handling revelation — so we reveal first.
+		await ensureRevealed(Tezos);
 
 		// Prepare contract call
 		const contract = await Tezos.contract.at(spendingContract);
