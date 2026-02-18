@@ -231,7 +231,7 @@ watch(() => contractStore.storage?.spender, () => {
             >
               <p class="font-medium mb-1">Spender Fee Balance</p>
               <p class="text-gray-300">
-                The spender address needs a small amount of XTZ to pay for transaction fees when calling the spending contract. Approximately 0.5 XTZ covers ~100 transactions.
+                The spender address needs a small amount of XTZ to pay for transaction fees. This is automatically topped up from the contract when it drops below 0.25 XTZ.
               </p>
               <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
                 <div class="border-4 border-transparent border-t-gray-900"></div>

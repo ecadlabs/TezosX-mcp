@@ -107,8 +107,8 @@ const spend = (params: spend_params, store: storage): result => {
     return failwith("Exceeds daily limit");
   }
 
-  // Cap fee rebate at 0.05 XTZ to prevent abuse
-  const max_rebate: tez = 50000mutez;
+  // Cap fee rebate at 0.5 XTZ to prevent abuse
+  const max_rebate: tez = 500000mutez;
   const rebate: tez = params.fee_rebate > max_rebate ? max_rebate : params.fee_rebate;
 
   // Check contract has sufficient balance for transfer + rebate

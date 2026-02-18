@@ -99,7 +99,7 @@
                                    COMPARE ;
                                    GT ;
                                    IF { DROP 3 ; PUSH string "Exceeds daily limit" ; FAILWITH }
-                                      { PUSH mutez 50000 ;
+                                      { PUSH mutez 500000 ;
                                         DUP ;
                                         DUP 5 ;
                                         GET 4 ;
