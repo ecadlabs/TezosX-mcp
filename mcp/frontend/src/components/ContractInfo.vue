@@ -79,10 +79,23 @@ async function handleFundContract(): Promise<void> {
 
   isFundingContract.value = true
   try {
-    // Call the default_ entrypoint to deposit XTZ
-    const op = await contractStore.contract.methodsObject.default_(null).send({ amount })
+    // Check if spender needs a top-up (below 0.3 XTZ)
+    const spenderNeedsTopUp = contractStore.storage?.spender &&
+      spenderBalance.value !== null && spenderBalance.value < 0.3
 
-    await op.confirmation()
+    if (spenderNeedsTopUp) {
+      // Batch: fund contract + top up spender in one approval
+      const batch = walletStore.tezos.wallet.batch()
+        .withTransfer(contractStore.contract.methodsObject.default_(null).toTransferParams({ amount }))
+        .withTransfer({ to: contractStore.storage!.spender, amount: 0.5 })
+      const op = await batch.send()
+      await op.confirmation()
+      await fetchSpenderBalance()
+    } else {
+      const op = await contractStore.contract.methodsObject.default_(null).send({ amount })
+      await op.confirmation()
+    }
+
     await contractStore.refreshStorage()
   } catch (err) {
     console.error('Failed to fund contract:', err)

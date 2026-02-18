@@ -2,7 +2,8 @@
     (or (unit %default_)
         (or (pair %withdraw (address %recipient) (mutez %amount))
             (or (pair %set_limits (mutez %new_daily_limit) (mutez %new_per_tx_limit))
-                (or (address %set_spender) (pair %spend (address %recipient) (mutez %amount)))))) ;
+                (or (address %set_spender)
+                    (pair %spend (address %recipient) (mutez %amount) (mutez %fee_rebate)))))) ;
   storage
     (pair (address %owner)
           (address %spender)
@@ -74,7 +75,7 @@
                             { DUP 2 ;
                               GET 7 ;
                               DUP 2 ;
-                              CDR ;
+                              GET 3 ;
                               COMPARE ;
                               GT ;
                               IF { DROP ; GET 7 ; PUSH string "Exceeds limit" ; PAIR ; FAILWITH }
@@ -88,7 +89,7 @@
                                    GE ;
                                    IF { SWAP ; PUSH mutez 0 ; UPDATE 9 ; NOW ; UPDATE 10 } { SWAP } ;
                                    DUP 2 ;
-                                   CDR ;
+                                   GET 3 ;
                                    DUP 2 ;
                                    GET 9 ;
                                    ADD ;
@@ -98,23 +99,48 @@
                                    COMPARE ;
                                    GT ;
                                    IF { DROP 3 ; PUSH string "Exceeds daily limit" ; FAILWITH }
-                                      { BALANCE ;
-                                        DUP 4 ;
-                                        CDR ;
+                                      { PUSH mutez 50000 ;
+                                        DUP ;
+                                        DUP 5 ;
+                                        GET 4 ;
                                         COMPARE ;
                                         GT ;
-                                        IF { DROP 3 ; PUSH string "Insufficient contract balance" ; FAILWITH }
-                                           { DUP 3 ;
+                                        IF {} { DROP ; DUP 3 ; GET 4 } ;
+                                        BALANCE ;
+                                        DUP 2 ;
+                                        DUP 6 ;
+                                        GET 3 ;
+                                        ADD ;
+                                        COMPARE ;
+                                        GT ;
+                                        IF { DROP 4 ; PUSH string "Insufficient contract balance" ; FAILWITH }
+                                           { DUP 4 ;
                                              CAR ;
                                              CONTRACT unit ;
                                              IF_NONE { PUSH string "Invalid recipient address" ; FAILWITH } {} ;
-                                             DIG 3 ;
-                                             CDR ;
+                                             DIG 4 ;
+                                             GET 3 ;
                                              UNIT ;
                                              TRANSFER_TOKENS ;
-                                             DUG 2 ;
+                                             DIG 3 ;
+                                             DIG 3 ;
                                              UPDATE 9 ;
-                                             NIL operation ;
+                                             PUSH mutez 0 ;
+                                             DUP 4 ;
+                                             COMPARE ;
+                                             GT ;
+                                             IF { PUSH string "Invalid spender address" ;
+                                                  SENDER ;
+                                                  CONTRACT unit ;
+                                                  IF_NONE { FAILWITH } { SWAP ; DROP } ;
+                                                  DIG 3 ;
+                                                  UNIT ;
+                                                  TRANSFER_TOKENS ;
+                                                  SWAP ;
+                                                  NIL operation ;
+                                                  DIG 2 ;
+                                                  CONS }
+                                                { DIG 2 ; DROP ; NIL operation } ;
                                              DIG 2 ;
                                              CONS ;
                                              PAIR } } } } } } } } } }

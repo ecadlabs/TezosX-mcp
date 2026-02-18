@@ -75,17 +75,21 @@ export const createSendXtzTool = (
 		// simulates via RPC without handling revelation — so we reveal first.
 		await ensureRevealed(Tezos);
 
-		// Prepare contract call
 		const contract = await Tezos.contract.at(spendingContract);
-		const contractCall = contract.methodsObject.spend({
-			recipient: params.toAddress,
-			amount: amountMutez,
-		});
 
-		// Estimate fees
+		// Two-pass fee estimation: first pass gets approximate fee, second pass
+		// re-estimates with that fee as fee_rebate so the operation size matches the real call
+		const makeSpendCall = (feeRebate: number) =>
+			contract.methodsObject.spend({
+				recipient: params.toAddress,
+				amount: amountMutez,
+				fee_rebate: feeRebate,
+			});
+
 		let estimate;
 		try {
-			estimate = await Tezos.estimate.contractCall(contractCall);
+			const initialEstimate = await Tezos.estimate.contractCall(makeSpendCall(0));
+			estimate = await Tezos.estimate.contractCall(makeSpendCall(initialEstimate.suggestedFeeMutez));
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : String(err);
 			if (message.includes("balance_too_low")) {
@@ -97,8 +101,6 @@ export const createSendXtzTool = (
 			throw err;
 		}
 
-		// Run another fee check because the first check is only estimating the fees, but still needs tez in the account to estimate.
-		// This check is checking against the actual estimated fee value.
 		if (spenderBalance.toNumber() < estimate.totalCost) {
 			throw new Error(
 				`Spender balance too low for fees. ` +
@@ -107,7 +109,8 @@ export const createSendXtzTool = (
 			);
 		}
 
-		// Execute transaction
+		// Execute with fee_rebate matching what was estimated
+		const contractCall = makeSpendCall(estimate.suggestedFeeMutez);
 		const operation = await contractCall.send();
 		await operation.confirmation(CONFIRMATIONS_TO_WAIT);
 
