@@ -1,7 +1,7 @@
 <script setup lang="ts">
 defineProps<{
   title: string
-  message: string
+  message?: string
   confirmText?: string
   cancelText?: string
   isLoading?: boolean
@@ -66,7 +66,9 @@ const emit = defineEmits<{
 
       <!-- Content -->
       <h3 class="text-lg font-semibold text-center text-text-primary mb-2">{{ title }}</h3>
-      <p class="text-sm text-text-muted text-center mb-6">{{ message }}</p>
+      <slot>
+        <p class="text-sm text-text-muted text-center mb-6">{{ message }}</p>
+      </slot>
 
       <!-- Actions -->
       <div class="flex gap-3">

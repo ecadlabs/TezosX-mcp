@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useContractStore, useWalletStore } from '@/stores'
 import { copyToClipboard, openInTzkt, mutezToXtz, formatXtz } from '@/utils'
+import ConfirmationModal from './ConfirmationModal.vue'
 
 const contractStore = useContractStore()
 const walletStore = useWalletStore()
@@ -16,6 +17,10 @@ const showTooltip = ref(false)
 // Contract funding state
 const contractFundAmount = ref('10')
 const isFundingContract = ref(false)
+
+// Batch funding modal state
+const showBatchModal = ref(false)
+const pendingFundAmount = ref(0)
 
 async function handleCopy(text: string, label: string): Promise<void> {
   await copyToClipboard(text)
@@ -71,28 +76,41 @@ async function handleFundSpender(): Promise<void> {
   }
 }
 
-async function handleFundContract(): Promise<void> {
+function spenderNeedsTopUp(): boolean {
+  return !!(contractStore.storage?.spender &&
+    spenderBalance.value !== null && spenderBalance.value < 0.3)
+}
+
+function handleFundContract(): void {
   if (!contractStore.contract || !walletStore.tezos) return
 
   const amount = parseFloat(contractFundAmount.value)
   if (isNaN(amount) || amount <= 0) return
 
+  pendingFundAmount.value = amount
+
+  if (spenderNeedsTopUp()) {
+    showBatchModal.value = true
+  } else {
+    executeFundContract(false)
+  }
+}
+
+async function executeFundContract(includeSpenderTopUp: boolean): Promise<void> {
+  if (!contractStore.contract || !walletStore.tezos) return
+
+  showBatchModal.value = false
   isFundingContract.value = true
   try {
-    // Check if spender needs a top-up (below 0.3 XTZ)
-    const spenderNeedsTopUp = contractStore.storage?.spender &&
-      spenderBalance.value !== null && spenderBalance.value < 0.3
-
-    if (spenderNeedsTopUp) {
-      // Batch: fund contract + top up spender in one approval
+    if (includeSpenderTopUp) {
       const batch = walletStore.tezos.wallet.batch()
-        .withTransfer(contractStore.contract.methodsObject.default_(null).toTransferParams({ amount }))
+        .withTransfer(contractStore.contract.methodsObject.default_(null).toTransferParams({ amount: pendingFundAmount.value }))
         .withTransfer({ to: contractStore.storage!.spender, amount: 0.5 })
       const op = await batch.send()
       await op.confirmation()
       await fetchSpenderBalance()
     } else {
-      const op = await contractStore.contract.methodsObject.default_(null).send({ amount })
+      const op = await contractStore.contract.methodsObject.default_(null).send({ amount: pendingFundAmount.value })
       await op.confirmation()
     }
 
@@ -252,5 +270,36 @@ watch(() => contractStore.storage?.spender, () => {
         </div>
       </div>
     </div>
+    <!-- Batch funding modal -->
+    <ConfirmationModal
+      v-if="showBatchModal"
+      title="Batched Transaction"
+      confirm-text="Approve"
+      cancel-text="Fund Contract Only"
+      @confirm="executeFundContract(true)"
+      @cancel="executeFundContract(false)"
+    >
+      <div class="mb-6">
+        <p class="text-sm text-text-muted text-center mb-4">
+          Your spender fee balance is low ({{ spenderBalanceXtz() }} XTZ). This will be batched as two operations in a single approval:
+        </p>
+        <div class="space-y-2">
+          <div class="card-subtle p-3 flex items-start gap-3">
+            <span class="text-xs font-semibold text-primary-600 bg-primary-100 rounded-full w-5 h-5 flex items-center justify-center shrink-0 mt-0.5">1</span>
+            <div>
+              <p class="text-sm font-medium text-text-primary">Fund contract</p>
+              <p class="text-xs text-text-muted">Deposit {{ pendingFundAmount }} XTZ into the spending contract</p>
+            </div>
+          </div>
+          <div class="card-subtle p-3 flex items-start gap-3">
+            <span class="text-xs font-semibold text-primary-600 bg-primary-100 rounded-full w-5 h-5 flex items-center justify-center shrink-0 mt-0.5">2</span>
+            <div>
+              <p class="text-sm font-medium text-text-primary">Top up spender</p>
+              <p class="text-xs text-text-muted">Send 0.5 XTZ for transaction fees</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ConfirmationModal>
   </section>
 </template>
