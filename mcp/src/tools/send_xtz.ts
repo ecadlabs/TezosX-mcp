@@ -6,6 +6,8 @@ import { ensureRevealed } from "./reveal_account.js";
 const MUTEZ_PER_TEZ = 1_000_000;
 const CONFIRMATIONS_TO_WAIT = 3;
 const TZKT_BASE_URL = "https://shadownet.tzkt.io";
+const SPENDER_TOP_UP_THRESHOLD = 250_000; // 0.25 XTZ
+const SPENDER_TOP_UP_TARGET = 500_000;    // 0.5 XTZ
 
 // Types
 const inputSchema = z.object({
@@ -75,11 +77,18 @@ export const createSendXtzTool = (
 		// simulates via RPC without handling revelation — so we reveal first.
 		await ensureRevealed(Tezos);
 
-		// Prepare contract call
 		const contract = await Tezos.contract.at(spendingContract);
+
+		// Top up spender from contract if balance is low
+		const spenderMutez = spenderBalance.toNumber();
+		const feeRebate = spenderMutez < SPENDER_TOP_UP_THRESHOLD
+			? SPENDER_TOP_UP_TARGET - spenderMutez
+			: 0;
+
 		const contractCall = contract.methodsObject.spend({
 			recipient: params.toAddress,
 			amount: amountMutez,
+			fee_rebate: feeRebate,
 		});
 
 		// Estimate fees
@@ -90,24 +99,21 @@ export const createSendXtzTool = (
 			const message = err instanceof Error ? err.message : String(err);
 			if (message.includes("balance_too_low")) {
 				throw new Error(
-					`Spender balance (${formatMutez(spenderBalance.toNumber())}) ` +
+					`Spender balance (${formatMutez(spenderMutez)}) ` +
 					`is too low to cover fees. Please fund the spending address.`
 				);
 			}
 			throw err;
 		}
 
-		// Run another fee check because the first check is only estimating the fees, but still needs tez in the account to estimate.
-		// This check is checking against the actual estimated fee value.
-		if (spenderBalance.toNumber() < estimate.totalCost) {
+		if (spenderMutez < estimate.totalCost) {
 			throw new Error(
 				`Spender balance too low for fees. ` +
 				`Required: ${formatMutez(estimate.totalCost)}, ` +
-				`Available: ${formatMutez(spenderBalance.toNumber())}`
+				`Available: ${formatMutez(spenderMutez)}`
 			);
 		}
 
-		// Execute transaction
 		const operation = await contractCall.send();
 		await operation.confirmation(CONFIRMATIONS_TO_WAIT);
 

@@ -26,7 +26,8 @@ export type storage = {
 // Parameters for the spend entrypoint
 export type spend_params = {
   recipient: address,
-  amount: tez
+  amount: tez,
+  fee_rebate: tez
 };
 
 // Parameters for the set_limits entrypoint
@@ -106,8 +107,12 @@ const spend = (params: spend_params, store: storage): result => {
     return failwith("Exceeds daily limit");
   }
 
-  // Check contract has sufficient balance
-  if (params.amount > Tezos.get_balance()) {
+  // Cap fee rebate at 0.5 XTZ to prevent abuse
+  const max_rebate: tez = 500000mutez;
+  const rebate: tez = params.fee_rebate > max_rebate ? max_rebate : params.fee_rebate;
+
+  // Check contract has sufficient balance for transfer + rebate
+  if (params.amount + rebate > Tezos.get_balance()) {
     return failwith("Insufficient contract balance");
   }
 
@@ -118,11 +123,22 @@ const spend = (params: spend_params, store: storage): result => {
   const transfer_op: operation =
     Tezos.Next.Operation.transaction(unit, params.amount, recipient_contract);
 
-  // Update spent_today counter
+  // Update spent_today counter (rebate not counted against limits)
   const final_store: storage = {
     ...updated_store,
     spent_today: new_spent_today
   };
+
+  // Only create rebate operation if rebate > 0
+  if (rebate > 0mutez) {
+    const spender_contract: contract<unit> =
+      Tezos.get_contract_with_error(Tezos.get_sender(), "Invalid spender address");
+
+    const rebate_op: operation =
+      Tezos.Next.Operation.transaction(unit, rebate, spender_contract);
+
+    return [list([transfer_op, rebate_op]), final_store];
+  }
 
   return [list([transfer_op]), final_store];
 };

@@ -91,8 +91,8 @@ async function handleConnectContract(): Promise<void> {
     <div class="mb-5">
       <p class="text-sm font-medium text-text-primary mb-3">Deploy New Wallet Contract</p>
       <p class="text-sm text-text-muted mb-4">
-        A spending keypair will be automatically generated when you deploy.
-        Make sure to save the secret key - you'll need it to configure your MCP server.
+        A spending key will be automatically generated when you deploy.
+        Make sure to save the secret key and contract address - you'll need them to configure your MCP server.
       </p>
 
       <div class="space-y-3">
