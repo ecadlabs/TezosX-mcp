@@ -1,5 +1,6 @@
 import { TezosToolkit } from "@taquito/taquito";
 import z from "zod";
+import type { LiveConfig } from "../live-config.js";
 
 /**
  * Check if an account is revealed on the Tezos network.
@@ -27,7 +28,7 @@ export async function ensureRevealed(Tezos: TezosToolkit): Promise<{ wasRevealed
 	return { wasRevealed: true, opHash: op.hash };
 }
 
-export const createRevealAccountTool = (Tezos: TezosToolkit) => ({
+export const createRevealAccountTool = (config: LiveConfig) => ({
 	name: "tezos_reveal_account",
 	config: {
 		title: "Reveal Account",
@@ -41,6 +42,7 @@ export const createRevealAccountTool = (Tezos: TezosToolkit) => ({
 		}
 	},
 	handler: async () => {
+		const { Tezos } = config;
 		const address = await Tezos.signer.publicKeyHash();
 		const result = await ensureRevealed(Tezos);
 

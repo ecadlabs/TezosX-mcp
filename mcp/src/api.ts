@@ -1,0 +1,110 @@
+import { Router } from 'express';
+import { InMemorySigner } from '@taquito/signer';
+import { b58cencode, prefix } from '@taquito/utils';
+import { randomBytes } from 'crypto';
+import { LiveConfig, configureLiveConfig, resetLiveConfig, type NetworkName, NETWORKS } from './live-config.js';
+import { savePrivateKey, saveContract, clearConfig, getStorePath } from './config-store.js';
+
+const log = (msg: string) => console.error(`[tezosx-mcp] ${msg}`);
+
+async function generateKeypair(): Promise<{ address: string; publicKey: string; secretKey: string }> {
+	const seed = randomBytes(32);
+	const secretKey = b58cencode(seed, prefix.edsk2);
+	const signer = await InMemorySigner.fromSecretKey(secretKey);
+	const publicKey = await signer.publicKey();
+	const address = await signer.publicKeyHash();
+	return { address, publicKey, secretKey };
+}
+
+export function createApiRouter(liveConfig: LiveConfig): Router {
+	const router = Router();
+
+	// Check config status (never exposes private key)
+	router.get('/api/status', (_req, res) => {
+		res.json({
+			configured: liveConfig.configured,
+			spenderAddress: liveConfig.spendingAddress || undefined,
+			contractAddress: liveConfig.spendingContract || undefined,
+			configPath: getStorePath(),
+		});
+	});
+
+	// Generate keypair server-side, persist private key, return only public info
+	router.post('/api/generate-keypair', async (_req, res) => {
+		try {
+			const keypair = await generateKeypair();
+
+			// Save private key to persistent store
+			savePrivateKey(keypair.secretKey);
+			log(`Generated and saved new spending keypair: ${keypair.address}`);
+
+			// If already configured (has contract), hot-reload the signer immediately.
+			// This handles key rotation — the new signer is active right away.
+			if (liveConfig.configured && liveConfig.spendingContract) {
+				await configureLiveConfig(liveConfig, keypair.secretKey, liveConfig.spendingContract);
+				log(`LiveConfig signer updated for key rotation: ${keypair.address}`);
+			}
+
+			// Return only public info — private key stays on server
+			res.json({
+				address: keypair.address,
+				publicKey: keypair.publicKey,
+			});
+		} catch (error) {
+			log(`Failed to generate keypair: ${error instanceof Error ? error.message : error}`);
+			res.status(500).json({ error: 'Failed to generate keypair' });
+		}
+	});
+
+	// Save contract address + network, complete configuration
+	router.post('/api/save-contract', async (req, res) => {
+		try {
+			const { contractAddress, network } = req.body as { contractAddress?: string; network?: string };
+
+			if (!contractAddress || !contractAddress.startsWith('KT1')) {
+				res.status(400).json({ error: 'Invalid contract address. Must start with KT1.' });
+				return;
+			}
+
+			const networkName = (network || 'mainnet') as NetworkName;
+			if (!(networkName in NETWORKS)) {
+				res.status(400).json({ error: `Invalid network: ${networkName}` });
+				return;
+			}
+
+			// Save to persistent store
+			saveContract(contractAddress, networkName);
+			log(`Saved contract address: ${contractAddress} on ${networkName}`);
+
+			// Hot-reload: update LiveConfig from stored private key
+			const { loadConfig } = await import('./config-store.js');
+			const stored = loadConfig();
+
+			if (stored.spendingPrivateKey) {
+				const spenderAddress = await configureLiveConfig(
+					liveConfig,
+					stored.spendingPrivateKey,
+					contractAddress,
+					networkName,
+				);
+				log(`LiveConfig updated: spender=${spenderAddress}, contract=${contractAddress}`);
+				res.json({ success: true, spenderAddress });
+			} else {
+				res.status(400).json({ error: 'No spending key found. Generate a keypair first.' });
+			}
+		} catch (error) {
+			log(`Failed to save contract: ${error instanceof Error ? error.message : error}`);
+			res.status(500).json({ error: 'Failed to save contract configuration' });
+		}
+	});
+
+	// Clear all stored config
+	router.delete('/api/config', (_req, res) => {
+		clearConfig();
+		resetLiveConfig(liveConfig);
+		log('Config cleared');
+		res.json({ success: true });
+	});
+
+	return router;
+}

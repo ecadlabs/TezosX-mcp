@@ -1,52 +1,35 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { InMemorySigner } from '@taquito/signer'
-import { b58cencode, prefix } from '@taquito/utils'
 import { useContractStore } from '@/stores'
 import ConfirmationModal from './ConfirmationModal.vue'
-import NewSpenderSuccess from './NewSpenderSuccess.vue'
-import type { Keypair } from '@/types'
 
 const contractStore = useContractStore()
 
 // State
 const showConfirmModal = ref(false)
 const isRegenerating = ref(false)
-const newKeypair = ref<Keypair | null>(null)
+const rotationSuccess = ref(false)
+const newSpenderAddress = ref('')
 
-function generateRandomBytes(length = 32): Uint8Array {
-  const array = new Uint8Array(length)
-  crypto.getRandomValues(array)
-  return array
-}
-
-async function generateKeypair(): Promise<Keypair> {
-  const seed = generateRandomBytes(32)
-  const secretKey = b58cencode(seed, prefix.edsk2)
-  const signer = await InMemorySigner.fromSecretKey(secretKey)
-
-  const publicKey = await signer.publicKey()
-  const address = await signer.publicKeyHash()
-
-  return {
-    address,
-    publicKey,
-    secretKey,
-  }
+async function generateKeypairOnServer(): Promise<{ address: string; publicKey: string }> {
+  const res = await fetch('/api/generate-keypair', { method: 'POST' })
+  if (!res.ok) throw new Error('Failed to generate keypair on server')
+  return res.json()
 }
 
 async function handleRegenerateConfirm(): Promise<void> {
   isRegenerating.value = true
 
   try {
-    // Generate new keypair
-    const keypair = await generateKeypair()
+    // Generate new keypair on server (private key stays server-side)
+    const { address } = await generateKeypairOnServer()
 
     // Update contract with new spender
-    await contractStore.setSpender(keypair.address)
+    await contractStore.setSpender(address)
 
-    // Show success with keypair
-    newKeypair.value = keypair
+    // Show success
+    newSpenderAddress.value = address
+    rotationSuccess.value = true
     showConfirmModal.value = false
   } catch (error) {
     console.error('Failed to regenerate spender:', error)
@@ -56,7 +39,8 @@ async function handleRegenerateConfirm(): Promise<void> {
 }
 
 function handleDone(): void {
-  newKeypair.value = null
+  rotationSuccess.value = false
+  newSpenderAddress.value = ''
 }
 </script>
 
@@ -64,12 +48,32 @@ function handleDone(): void {
   <section class="card p-5 mb-5">
     <p class="section-label mb-4">spender key management</p>
 
-    <!-- Success State: Show new keypair -->
-    <NewSpenderSuccess
-      v-if="newKeypair"
-      :keypair="newKeypair"
-      @done="handleDone"
-    />
+    <!-- Success State -->
+    <div v-if="rotationSuccess" class="card-subtle p-4 border-2 border-green-200 bg-green-50/50">
+      <div class="flex items-center gap-2 mb-3">
+        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <span class="font-semibold text-green-800">Spender Updated Successfully</span>
+      </div>
+
+      <p class="text-sm text-green-700 mb-3">
+        Your MCP server has been automatically updated with the new spending key. No manual configuration needed.
+      </p>
+
+      <div class="mb-4">
+        <label class="label">new spender address</label>
+        <code class="mono bg-white px-2 py-1.5 rounded block break-all text-sm border border-green-200">
+          {{ newSpenderAddress }}
+        </code>
+      </div>
+
+      <button @click="handleDone" class="btn-primary w-full">
+        Done
+      </button>
+    </div>
 
     <!-- Default State: Regenerate option -->
     <div v-else class="card-subtle p-4 border border-amber-200 bg-amber-50/50">
@@ -82,7 +86,7 @@ function handleDone(): void {
           <p class="text-sm text-amber-700">
             This will generate a new spending keypair and update the contract.
             The current spender key will <strong>stop working immediately</strong>.
-            You'll need to update your MCP server configuration with the new secret key.
+            Your MCP server will be updated automatically.
           </p>
         </div>
       </div>

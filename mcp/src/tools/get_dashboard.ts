@@ -1,7 +1,8 @@
 import z from "zod";
 import { DEFAULT_WEB_PORT } from '../index.js'
+import type { LiveConfig } from "../live-config.js";
 
-export const createGetDashboardTool = (spendingContract: string) => ({
+export const createGetDashboardTool = (config: LiveConfig) => ({
 	name: "tezos_get_dashboard",
 	config: {
 		title: "Get Contract Dashboard",
@@ -18,7 +19,7 @@ export const createGetDashboardTool = (spendingContract: string) => ({
 	handler: async () => {
 		const port = process.env.WEB_PORT || DEFAULT_WEB_PORT;
 		const network = process.env.TEZOS_NETWORK || 'shadownet';
-		const url = `http://localhost:${port}?contract=${spendingContract}&network=${network}`
+		const url = `http://localhost:${port}?contract=${config.spendingContract}&network=${network}`
 
 		return {
 			content: [

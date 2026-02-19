@@ -1,5 +1,5 @@
-import { TezosToolkit } from "@taquito/taquito";
 import z from "zod";
+import type { LiveConfig } from "../live-config.js";
 
 // Types
 interface ContractStorage {
@@ -11,7 +11,7 @@ interface ContractStorage {
 	last_reset: string;
 }
 
-export const createGetAddressesTool = (Tezos: TezosToolkit, spendingContract: string) => ({
+export const createGetAddressesTool = (config: LiveConfig) => ({
 	name: "tezos_get_addresses",
 	config: {
 		title: "Get Tezos Addresses",
@@ -26,6 +26,7 @@ export const createGetAddressesTool = (Tezos: TezosToolkit, spendingContract: st
 		},
 	},
 	handler: async () => {
+		const { Tezos, spendingContract } = config;
 		const contract = await Tezos.contract.at(spendingContract);
 		const storage = (await contract.storage()) as ContractStorage;
 

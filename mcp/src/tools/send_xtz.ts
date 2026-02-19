@@ -1,6 +1,6 @@
-import { TezosToolkit } from "@taquito/taquito";
 import z from "zod";
 import { ensureRevealed } from "./reveal_account.js";
+import type { LiveConfig } from "../live-config.js";
 
 // Constants
 const MUTEZ_PER_TEZ = 1_000_000;
@@ -25,18 +25,7 @@ const xtzToMutez = (xtz: number): number => xtz * MUTEZ_PER_TEZ;
 /** Format mutez for display */
 const formatMutez = (mutez: number): string => `${mutez} mutez`;
 
-/**
- * MCP tool for sending XTZ via a spending contract.
- *
- * @param Tezos - Configured TezosToolkit instance (with signer set to spender key)
- * @param spendingContract - Address of the spending-limited wallet contract
- * @param spendingAddress - Address of the spender account (for fee payments)
- */
-export const createSendXtzTool = (
-	Tezos: TezosToolkit,
-	spendingContract: string,
-	spendingAddress: string
-) => ({
+export const createSendXtzTool = (config: LiveConfig) => ({
 	name: "tezos_send_xtz",
 	config: {
 		title: "Send Tez",
@@ -51,7 +40,8 @@ export const createSendXtzTool = (
 	},
 
 	handler: async (params: any) => {
-		params = params as SendXtzParams; 
+		params = params as SendXtzParams;
+		const { Tezos, spendingContract, spendingAddress } = config;
 		// Validate spender has funds for fees
 		const spenderBalance = await Tezos.tz.getBalance(spendingAddress);
 		if (spenderBalance.isZero()) {

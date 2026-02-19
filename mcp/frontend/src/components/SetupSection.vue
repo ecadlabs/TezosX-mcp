@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { InMemorySigner } from '@taquito/signer'
-import { b58cencode, prefix } from '@taquito/utils'
 import { useWalletStore, useContractStore } from '@/stores'
-import type { Keypair } from '@/types'
 
 const walletStore = useWalletStore()
 const contractStore = useContractStore()
@@ -14,25 +11,19 @@ const originateDailyLimit = ref('100')
 const originatePerTxLimit = ref('10')
 const isDeploying = ref(false)
 
-function generateRandomBytes(length = 32): Uint8Array {
-  const array = new Uint8Array(length)
-  crypto.getRandomValues(array)
-  return array
+async function generateKeypairOnServer(): Promise<{ address: string; publicKey: string }> {
+  const res = await fetch('/api/generate-keypair', { method: 'POST' })
+  if (!res.ok) throw new Error('Failed to generate keypair on server')
+  return res.json()
 }
 
-async function generateKeypair(): Promise<Keypair> {
-  const seed = generateRandomBytes(32)
-  const secretKey = b58cencode(seed, prefix.edsk2)
-  const signer = await InMemorySigner.fromSecretKey(secretKey)
-
-  const publicKey = await signer.publicKey()
-  const address = await signer.publicKeyHash()
-
-  return {
-    address,
-    publicKey,
-    secretKey,
-  }
+async function saveContractOnServer(contractAddress: string, network: string): Promise<void> {
+  const res = await fetch('/api/save-contract', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contractAddress, network }),
+  })
+  if (!res.ok) throw new Error('Failed to save contract configuration')
 }
 
 async function handleOriginate(): Promise<void> {
@@ -41,19 +32,21 @@ async function handleOriginate(): Promise<void> {
   isDeploying.value = true
 
   try {
-    // Generate keypair automatically
-    const keypair = await generateKeypair()
+    // Generate keypair on server (private key stays server-side)
+    const { address: spenderAddress } = await generateKeypairOnServer()
 
     const dailyLimit = parseFloat(originateDailyLimit.value) || 100
     const perTxLimit = parseFloat(originatePerTxLimit.value) || 10
 
-    await contractStore.originateContract(
+    const contractAddress = await contractStore.originateContract(
       walletStore.userAddress,
-      keypair.address,
+      spenderAddress,
       dailyLimit,
       perTxLimit,
-      keypair
     )
+
+    // Save contract address to server (completes config)
+    await saveContractOnServer(contractAddress, walletStore.networkId)
   } catch (error) {
     console.error('Deployment failed:', error)
   } finally {
@@ -91,8 +84,8 @@ async function handleConnectContract(): Promise<void> {
     <div class="mb-5">
       <p class="text-sm font-medium text-text-primary mb-3">Deploy New Wallet Contract</p>
       <p class="text-sm text-text-muted mb-4">
-        A spending key will be automatically generated when you deploy.
-        Make sure to save the secret key and contract address - you'll need them to configure your MCP server.
+        A spending key will be automatically generated and saved to your MCP server.
+        No manual configuration needed.
       </p>
 
       <div class="space-y-3">

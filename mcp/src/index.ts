@@ -2,9 +2,6 @@
 export const DEFAULT_WEB_PORT = '13205';
 
 import { config } from 'dotenv';
-// Taquito
-import { InMemorySigner } from "@taquito/signer";
-import { TezosToolkit } from "@taquito/taquito";
 
 // MCP
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -20,6 +17,11 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { fileURLToPath } from "url";
 import { join } from "path";
 
+// Config
+import { createLiveConfig, configureLiveConfig, NETWORKS, type NetworkName } from "./live-config.js";
+import { loadConfig } from "./config-store.js";
+import { createApiRouter } from "./api.js";
+
 config({ quiet: true });
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
@@ -31,38 +33,49 @@ process.on('unhandledRejection', (reason) => {
 	console.error('[tezosx-mcp] Unhandled rejection:', reason);
 });
 
-// Wallet configuration type (null when not configured)
-export type WalletConfig = {
-	Tezos: TezosToolkit;
-	spendingContract: string;
-	spendingAddress: string;
-} | null;
-
-// Network configurations
-const NETWORKS = {
-	mainnet: {
-		rpcUrl: 'https://mainnet.tezos.ecadinfra.com',
-		tzktApi: 'https://api.tzkt.io',
-	},
-	shadownet: {
-		rpcUrl: 'https://shadownet.tezos.ecadinfra.com',
-		tzktApi: 'https://api.shadownet.tzkt.io',
-	},
-} as const;
-
-type NetworkName = keyof typeof NETWORKS;
+function isValidPrivateKey(key: string): boolean {
+	return key.startsWith('edsk') || key.startsWith('spsk') || key.startsWith('p2sk');
+}
 
 const log = (msg: string) => console.error(`[tezosx-mcp] ${msg}`);
 
 const init = async () => {
 	log('Starting server...');
 
-	// Start web server for frontend (skip if SKIP_FRONTEND is set or if using HTTP transport)
-	const skipFrontend = process.env.SKIP_FRONTEND === 'true' || process.env.MCP_TRANSPORT === 'http';
-	if (!skipFrontend) {
-		const webPort = parseInt(process.env.WEB_PORT || DEFAULT_WEB_PORT, 10);
-		startWebServer(webPort);
-		log(`Frontend server started on port ${webPort}`);
+	// Determine network
+	const networkName = (process.env.TEZOS_NETWORK || 'mainnet') as NetworkName;
+	if (!(networkName in NETWORKS)) {
+		throw new ReferenceError(`Invalid network: ${networkName}. Valid options: ${Object.keys(NETWORKS).join(', ')}`);
+	}
+	log(`Network: ${networkName}`);
+
+	// Create shared mutable config
+	const liveConfig = createLiveConfig(networkName);
+
+	// Try to load config: persistent store first, then env vars
+	const stored = loadConfig();
+	const privateKey = stored.spendingPrivateKey?.trim() || process.env.SPENDING_PRIVATE_KEY?.trim();
+	const spendingContract = stored.spendingContract?.trim() || process.env.SPENDING_CONTRACT?.trim();
+	const configNetwork = (stored.network as NetworkName) || networkName;
+
+	if (privateKey && spendingContract) {
+		if (!isValidPrivateKey(privateKey)) {
+			log('Warning: Invalid private key format. Must start with edsk, spsk, or p2sk. Wallet not configured.');
+		} else {
+			try {
+				const spendingAddress = await configureLiveConfig(liveConfig, privateKey, spendingContract, configNetwork);
+				log(`Wallet configured: ${spendingAddress}`);
+				if (stored.spendingPrivateKey) {
+					log('Config loaded from persistent store');
+				} else {
+					log('Config loaded from environment variables');
+				}
+			} catch (error) {
+				log(`Warning: Failed to initialize signer: ${error instanceof Error ? error.message : 'Unknown error'}. Wallet not configured.`);
+			}
+		}
+	} else {
+		log('Wallet not configured — visit the dashboard to set up');
 	}
 
 	const server = new McpServer({
@@ -70,50 +83,25 @@ const init = async () => {
 		version: "1.0.0"
 	});
 
-	// Network configuration
-	const networkName = (process.env.TEZOS_NETWORK || 'mainnet') as NetworkName;
-	const network = NETWORKS[networkName];
-	if (!network) {
-		throw new ReferenceError(`Invalid network: ${networkName}. Valid options: ${Object.keys(NETWORKS).join(', ')}`);
-	}
-	log(`Network: ${networkName}`);
-
-	// Taquito setup
-	const Tezos = new TezosToolkit(network.rpcUrl);
-
-	// Wallet configuration (optional - tools will guide user to configure if not set)
-	let walletConfig: WalletConfig = null;
-	const privateKey = process.env.SPENDING_PRIVATE_KEY?.trim();
-	const spendingContract = process.env.SPENDING_CONTRACT?.trim();
-
-	if (privateKey && spendingContract) {
-		log('Configuring wallet...');
-		// Validate private key format
-		if (!privateKey.startsWith('edsk') && !privateKey.startsWith('spsk') && !privateKey.startsWith('p2sk')) {
-			log(`Warning: Invalid SPENDING_PRIVATE_KEY format. Must start with edsk, spsk, or p2sk. Wallet not configured.`);
-		} else {
-			try {
-				const signer = await InMemorySigner.fromSecretKey(privateKey);
-				Tezos.setSignerProvider(signer);
-				const spendingAddress = await Tezos.signer.publicKeyHash();
-				walletConfig = { Tezos, spendingContract, spendingAddress };
-				log(`Wallet configured: ${spendingAddress}`);
-			} catch (error) {
-				log(`Warning: Failed to initialize signer: ${error instanceof Error ? error.message : 'Unknown error'}. Wallet not configured.`);
-			}
-		}
-	} else {
-		log('Wallet not configured (missing SPENDING_PRIVATE_KEY or SPENDING_CONTRACT)');
-	}
-
 	// Tools
 	log('Registering tools...');
 	const http = process.env.MCP_TRANSPORT === 'http';
-	const tools = createTools(walletConfig, network.tzktApi, http);
+	const tools = createTools(liveConfig, http);
 	tools.forEach(tool => {
 		server.registerTool(tool.name, tool.config, tool.handler);
 	});
 	log(`Registered ${tools.length} tools`);
+
+	// API router (shared between both transports)
+	const apiRouter = createApiRouter(liveConfig);
+
+	// Start web server for frontend (skip if SKIP_FRONTEND is set or if using HTTP transport)
+	const skipFrontend = process.env.SKIP_FRONTEND === 'true' || http;
+	if (!skipFrontend) {
+		const webPort = parseInt(process.env.WEB_PORT || DEFAULT_WEB_PORT, 10);
+		startWebServer(webPort, apiRouter);
+		log(`Frontend server started on port ${webPort}`);
+	}
 
 	const transport = process.env.MCP_TRANSPORT || 'stdio';
 	log(`Transport: ${transport}`);
@@ -121,6 +109,9 @@ const init = async () => {
 	if (transport === 'http') {
 		const app = express();
 		app.use(express.json());
+
+		// API routes
+		app.use(apiRouter);
 
 		// Dashboard frontend (serve from frontend/dist)
 		const frontendPath = join(__dirname, "../frontend/dist");

@@ -85,7 +85,6 @@ onMounted(async () => {
       <DeploymentSuccess
         v-if="contractStore.deploymentResult"
         :contract-address="contractStore.deploymentResult.contractAddress"
-        :keypair="contractStore.deploymentResult.keypair"
         @continue="contractStore.clearDeploymentResult()"
       />
 
