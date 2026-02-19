@@ -3,7 +3,7 @@ import { InMemorySigner } from '@taquito/signer';
 import { b58cencode, prefix } from '@taquito/utils';
 import { randomBytes } from 'crypto';
 import { LiveConfig, configureLiveConfig, resetLiveConfig, type NetworkName, NETWORKS } from './live-config.js';
-import { savePrivateKey, saveContract, clearConfig } from './config-store.js';
+import { savePrivateKey, saveContract, clearConfig, loadConfig } from './config-store.js';
 
 const log = (msg: string) => console.error(`[tezosx-mcp] ${msg}`);
 
@@ -109,7 +109,6 @@ export function createApiRouter(liveConfig: LiveConfig): Router {
 			log(`Saved contract address: ${contractAddress} on ${networkName}`);
 
 			// Hot-reload: update LiveConfig from stored private key
-			const { loadConfig } = await import('./config-store.js');
 			const stored = loadConfig();
 
 			if (stored.spendingPrivateKey) {
