@@ -25,6 +25,9 @@ const xtzToMutez = (xtz: number): number => xtz * MUTEZ_PER_TEZ;
 /** Format mutez for display */
 const formatMutez = (mutez: number): string => `${mutez} mutez`;
 
+// Cache the last-verified spender so we only hit the chain when config changes
+let verifiedSpender: { address: string; contract: string } | null = null;
+
 export const createSendXtzTool = (config: LiveConfig) => ({
 	name: "tezos_send_xtz",
 	config: {
@@ -43,16 +46,22 @@ export const createSendXtzTool = (config: LiveConfig) => ({
 		params = params as SendXtzParams;
 		const { Tezos, spendingContract, spendingAddress } = config;
 
-		// Verify the server's signer matches the on-chain spender
-		const contract = await Tezos.contract.at(spendingContract);
-		const storage = await contract.storage<{ spender: string }>();
-		if (storage.spender !== spendingAddress) {
-			throw new Error(
-				`Spender mismatch: the server's signing key (${spendingAddress}) does not match ` +
-				`the contract's spender (${storage.spender}). ` +
-				`The spender key may have been rotated. Please regenerate the spender key from the dashboard ` +
-				`or restart the MCP server.`
-			);
+		// Verify the server's signer matches the on-chain spender (only when config changes)
+		const needsVerify = !verifiedSpender
+			|| verifiedSpender.address !== spendingAddress
+			|| verifiedSpender.contract !== spendingContract;
+
+		if (needsVerify) {
+			const c = await Tezos.contract.at(spendingContract);
+			const storage = await c.storage<{ spender: string }>();
+			if (storage.spender !== spendingAddress) {
+				throw new Error(
+					`Spender mismatch: the server's signing key (${spendingAddress}) does not match ` +
+					`the contract's spender (${storage.spender}). ` +
+					`Please regenerate the spender key from the dashboard.`
+				);
+			}
+			verifiedSpender = { address: spendingAddress, contract: spendingContract };
 		}
 
 		// Validate spender has funds for fees
@@ -86,6 +95,7 @@ export const createSendXtzTool = (config: LiveConfig) => ({
 			? SPENDER_TOP_UP_TARGET - spenderMutez
 			: 0;
 
+		const contract = await Tezos.contract.at(spendingContract);
 		const contractCall = contract.methodsObject.spend({
 			recipient: params.toAddress,
 			amount: amountMutez,
