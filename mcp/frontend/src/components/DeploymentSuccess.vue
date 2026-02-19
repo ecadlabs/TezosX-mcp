@@ -1,22 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { copyToClipboard } from '@/utils'
-
-const props = defineProps<{
+defineProps<{
   contractAddress: string
 }>()
 
 const emit = defineEmits<{
   continue: []
 }>()
-
-const copyFeedback = ref('')
-
-async function handleCopy(text: string, label: string): Promise<void> {
-  await copyToClipboard(text)
-  copyFeedback.value = label
-  setTimeout(() => { copyFeedback.value = '' }, 2000)
-}
 </script>
 
 <template>
@@ -44,21 +33,16 @@ async function handleCopy(text: string, label: string): Promise<void> {
       </p>
     </div>
 
-    <!-- Contract Address -->
-    <div class="card-subtle p-4 mb-4">
-      <div class="mb-3">
-        <label class="label">contract address</label>
-        <div class="flex items-center gap-2">
-          <code class="mono bg-white px-2 py-1.5 rounded flex-1 break-all text-sm border border-gray-200">
-            {{ contractAddress }}
-          </code>
-          <button
-            @click="handleCopy(contractAddress, 'contract')"
-            class="btn-secondary !py-1.5 !px-2 text-xs"
-          >
-            {{ copyFeedback === 'contract' ? 'Copied!' : 'Copy' }}
-          </button>
-        </div>
+    <!-- Fund reminder -->
+    <div class="card-subtle p-4 mb-4 border border-amber-200 bg-amber-50/50">
+      <div class="flex items-start gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+        </svg>
+        <p class="text-sm text-amber-700">
+          <strong>Next step:</strong> Send some XTZ to your spending contract so the MCP server has funds to work with.
+          You can do this from the dashboard on the next page.
+        </p>
       </div>
     </div>
 

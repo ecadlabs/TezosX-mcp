@@ -17,6 +17,9 @@ async function generateKeypairOnServer(): Promise<{ address: string; publicKey: 
   return res.json()
 }
 
+// Fund the new spender with enough tez for gas fees (matches SPENDER_TOP_UP_TARGET in send_xtz)
+const SPENDER_INITIAL_FUNDING_XTZ = 0.5
+
 async function handleRegenerateConfirm(): Promise<void> {
   isRegenerating.value = true
 
@@ -26,6 +29,9 @@ async function handleRegenerateConfirm(): Promise<void> {
 
     // Update contract with new spender
     await contractStore.setSpender(address)
+
+    // Fund the new spender from the contract so it can pay gas fees
+    await contractStore.withdraw(address, SPENDER_INITIAL_FUNDING_XTZ)
 
     // Show success
     newSpenderAddress.value = address
@@ -84,7 +90,8 @@ function handleDone(): void {
         <div>
           <p class="text-sm font-medium text-amber-800 mb-1">Regenerate Spender Keypair</p>
           <p class="text-sm text-amber-700">
-            This will generate a new spending keypair and update the contract.
+            This will generate a new spending keypair, update the contract, and fund the new
+            spender with {{ SPENDER_INITIAL_FUNDING_XTZ }} XTZ for gas fees.
             The current spender key will <strong>stop working immediately</strong>.
             Your MCP server will be updated automatically.
           </p>
@@ -107,7 +114,7 @@ function handleDone(): void {
     <ConfirmationModal
       v-if="showConfirmModal"
       title="Regenerate Spender Key?"
-      message="This action cannot be undone. The current spender key will be invalidated immediately and any services using it will lose access."
+      :message="`This action cannot be undone. The current spender key will be invalidated immediately and any services using it will lose access. The new spender will be funded with ${SPENDER_INITIAL_FUNDING_XTZ} XTZ from the contract for gas fees.`"
       confirm-text="Regenerate"
       cancel-text="Cancel"
       variant="danger"
