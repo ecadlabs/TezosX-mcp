@@ -9,6 +9,7 @@ const contractStore = useContractStore()
 const showConfirmModal = ref(false)
 const isRegenerating = ref(false)
 const rotationSuccess = ref(false)
+const fundingFailed = ref(false)
 const newSpenderAddress = ref('')
 
 async function generateKeypairOnServer(): Promise<{ address: string; publicKey: string }> {
@@ -38,10 +39,15 @@ async function handleRegenerateConfirm(): Promise<void> {
     // On-chain tx confirmed — now activate the new signer on the MCP server
     await activateKeyOnServer()
 
-    // Fund the new spender from the contract so it can pay gas fees
-    await contractStore.withdraw(address, SPENDER_INITIAL_FUNDING_XTZ)
+    // Try to fund the new spender — not critical, rotation is already complete
+    try {
+      await contractStore.withdraw(address, SPENDER_INITIAL_FUNDING_XTZ)
+    } catch (err) {
+      console.warn('Failed to fund new spender (contract balance may be too low):', err)
+      fundingFailed.value = true
+    }
 
-    // Show success
+    // Show success regardless of funding outcome
     newSpenderAddress.value = address
     rotationSuccess.value = true
     showConfirmModal.value = false
@@ -54,6 +60,7 @@ async function handleRegenerateConfirm(): Promise<void> {
 
 function handleDone(): void {
   rotationSuccess.value = false
+  fundingFailed.value = false
   newSpenderAddress.value = ''
 }
 </script>
@@ -76,6 +83,19 @@ function handleDone(): void {
       <p class="text-sm text-green-700 mb-3">
         Your MCP server has been automatically updated with the new spending key. No manual configuration needed.
       </p>
+
+      <!-- Warning if funding failed -->
+      <div v-if="fundingFailed" class="p-3 mb-3 rounded border border-amber-200 bg-amber-50/50">
+        <div class="flex items-start gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          <p class="text-sm text-amber-700">
+            Could not fund the new spender with {{ SPENDER_INITIAL_FUNDING_XTZ }} XTZ for gas fees — the contract balance may be too low.
+            Send some XTZ to the spender address below or fund the contract from the dashboard.
+          </p>
+        </div>
+      </div>
 
       <div class="mb-4">
         <label class="label">new spender address</label>
