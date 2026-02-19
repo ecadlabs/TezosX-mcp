@@ -56,7 +56,8 @@ const init = async () => {
 	const stored = loadConfig();
 	const privateKey = stored.spendingPrivateKey?.trim() || process.env.SPENDING_PRIVATE_KEY?.trim();
 	const spendingContract = stored.spendingContract?.trim() || process.env.SPENDING_CONTRACT?.trim();
-	const configNetwork = (stored.network as NetworkName) || networkName;
+	const storedNetwork = stored.network && stored.network in NETWORKS ? stored.network as NetworkName : undefined;
+	const configNetwork = storedNetwork || networkName;
 
 	if (privateKey && spendingContract) {
 		if (!isValidPrivateKey(privateKey)) {
