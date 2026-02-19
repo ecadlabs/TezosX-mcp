@@ -10,6 +10,7 @@ const existingContractAddress = ref('')
 const originateDailyLimit = ref('100')
 const originatePerTxLimit = ref('10')
 const isDeploying = ref(false)
+const deployError = ref('')
 
 async function generateKeypairOnServer(): Promise<{ address: string; publicKey: string }> {
   const res = await fetch('/api/generate-keypair', { method: 'POST' })
@@ -30,6 +31,7 @@ async function handleOriginate(): Promise<void> {
   if (!walletStore.userAddress) return
 
   isDeploying.value = true
+  deployError.value = ''
 
   try {
     // Generate keypair on server (private key stays server-side)
@@ -49,6 +51,7 @@ async function handleOriginate(): Promise<void> {
     await saveContractOnServer(contractAddress, walletStore.networkId)
   } catch (error) {
     console.error('Deployment failed:', error)
+    deployError.value = error instanceof Error ? error.message : 'Deployment failed'
   } finally {
     isDeploying.value = false
   }
@@ -108,6 +111,8 @@ async function handleConnectContract(): Promise<void> {
           <span v-if="isDeploying || contractStore.isLoading" class="spinner"></span>
           {{ !walletStore.isConnected ? 'Connect Wallet to Deploy' : isDeploying || contractStore.isLoading ? 'Deploying...' : 'Deploy Contract' }}
         </button>
+
+        <p v-if="deployError" class="text-sm text-error mt-2">{{ deployError }}</p>
       </div>
     </div>
 
