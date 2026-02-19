@@ -2,6 +2,7 @@ import Conf from 'conf';
 
 interface StoredConfig {
 	spendingPrivateKey: string;
+	pendingPrivateKey: string;
 	spendingContract: string;
 	network: string;
 }
@@ -19,8 +20,21 @@ export function loadConfig(): Partial<StoredConfig> {
 	return { spendingPrivateKey, spendingContract, network };
 }
 
-export function savePrivateKey(key: string): void {
+export function savePendingKey(key: string): void {
+	store.set('pendingPrivateKey', key);
+}
+
+export function loadPendingKey(): string | undefined {
+	return store.get('pendingPrivateKey') || undefined;
+}
+
+/** Promote the pending key to active and clear the pending slot. */
+export function activatePendingKey(): string {
+	const key = store.get('pendingPrivateKey');
+	if (!key) throw new Error('No pending key to activate');
 	store.set('spendingPrivateKey', key);
+	store.delete('pendingPrivateKey');
+	return key;
 }
 
 export function saveContract(address: string, network: string): void {

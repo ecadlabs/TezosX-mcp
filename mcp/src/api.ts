@@ -3,7 +3,7 @@ import { InMemorySigner } from '@taquito/signer';
 import { b58cencode, prefix } from '@taquito/utils';
 import { randomBytes } from 'crypto';
 import { LiveConfig, configureLiveConfig, resetLiveConfig, type NetworkName, NETWORKS } from './live-config.js';
-import { savePrivateKey, saveContract, clearConfig, loadConfig } from './config-store.js';
+import { savePendingKey, loadPendingKey, activatePendingKey, saveContract, clearConfig, loadConfig } from './config-store.js';
 
 const log = (msg: string) => console.error(`[tezosx-mcp] ${msg}`);
 
@@ -61,16 +61,29 @@ export function createApiRouter(liveConfig: LiveConfig): Router {
 		});
 	});
 
-	// Generate keypair server-side, persist private key, return only public info.
+	// Generate keypair server-side, persist as *pending* key, return only public info.
 	// Does NOT hot-reload the signer — the old key stays active until /api/activate-key
-	// is called after the on-chain setSpender tx confirms.
+	// or /api/save-contract promotes the pending key.
+	// Idempotent: if a pending key already exists, returns its public info instead of
+	// generating a new one (prevents accidental overwrites if the on-chain tx fails).
 	router.post('/api/generate-keypair', async (_req, res) => {
 		try {
+			// Return existing pending key if one hasn't been activated yet
+			const existingPending = loadPendingKey();
+			if (existingPending) {
+				const signer = await InMemorySigner.fromSecretKey(existingPending);
+				const publicKey = await signer.publicKey();
+				const address = await signer.publicKeyHash();
+				log(`Returning existing pending keypair: ${address}`);
+				res.json({ address, publicKey });
+				return;
+			}
+
 			const keypair = await generateKeypair();
 
-			// Save private key to persistent store (old signer stays active)
-			savePrivateKey(keypair.secretKey);
-			log(`Generated and saved new spending keypair: ${keypair.address}`);
+			// Save to pending slot (active key stays untouched)
+			savePendingKey(keypair.secretKey);
+			log(`Generated and saved new pending keypair: ${keypair.address}`);
 
 			// Return only public info — private key stays on server
 			res.json({
@@ -83,12 +96,13 @@ export function createApiRouter(liveConfig: LiveConfig): Router {
 		}
 	});
 
-	// Activate the stored key — call this after on-chain setSpender confirms
+	// Activate the pending key — call this after on-chain setSpender confirms.
+	// Promotes pendingPrivateKey → spendingPrivateKey and hot-reloads the signer.
 	router.post('/api/activate-key', async (_req, res) => {
 		try {
-			const stored = loadConfig();
-			if (!stored.spendingPrivateKey) {
-				res.status(400).json({ error: 'No spending key found. Generate a keypair first.' });
+			const pendingKey = loadPendingKey();
+			if (!pendingKey) {
+				res.status(400).json({ error: 'No pending key found. Generate a keypair first.' });
 				return;
 			}
 			if (!liveConfig.spendingContract) {
@@ -96,9 +110,12 @@ export function createApiRouter(liveConfig: LiveConfig): Router {
 				return;
 			}
 
+			// Promote pending → active in the store
+			activatePendingKey();
+
 			const spenderAddress = await configureLiveConfig(
 				liveConfig,
-				stored.spendingPrivateKey,
+				pendingKey,
 				liveConfig.spendingContract,
 			);
 			log(`LiveConfig signer activated: ${spenderAddress}`);
@@ -129,21 +146,28 @@ export function createApiRouter(liveConfig: LiveConfig): Router {
 			saveContract(contractAddress, networkName);
 			log(`Saved contract address: ${contractAddress} on ${networkName}`);
 
-			// Hot-reload: update LiveConfig from stored private key
+			// Promote pending key → active (initial deploy flow)
+			const pendingKey = loadPendingKey();
 			const stored = loadConfig();
+			const privateKey = pendingKey || stored.spendingPrivateKey;
 
-			if (stored.spendingPrivateKey) {
-				const spenderAddress = await configureLiveConfig(
-					liveConfig,
-					stored.spendingPrivateKey,
-					contractAddress,
-					networkName,
-				);
-				log(`LiveConfig updated: spender=${spenderAddress}, contract=${contractAddress}`);
-				res.json({ success: true, spenderAddress });
-			} else {
+			if (!privateKey) {
 				res.status(400).json({ error: 'No spending key found. Generate a keypair first.' });
+				return;
 			}
+
+			if (pendingKey) {
+				activatePendingKey();
+			}
+
+			const spenderAddress = await configureLiveConfig(
+				liveConfig,
+				privateKey,
+				contractAddress,
+				networkName,
+			);
+			log(`LiveConfig updated: spender=${spenderAddress}, contract=${contractAddress}`);
+			res.json({ success: true, spenderAddress });
 		} catch (error) {
 			log(`Failed to save contract: ${error instanceof Error ? error.message : error}`);
 			res.status(500).json({ error: 'Failed to save contract configuration' });
