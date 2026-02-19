@@ -17,6 +17,11 @@ async function generateKeypairOnServer(): Promise<{ address: string; publicKey: 
   return res.json()
 }
 
+async function activateKeyOnServer(): Promise<void> {
+  const res = await fetch('/api/activate-key', { method: 'POST' })
+  if (!res.ok) throw new Error('Failed to activate key on server')
+}
+
 // Fund the new spender with enough tez for gas fees (matches SPENDER_TOP_UP_TARGET in send_xtz)
 const SPENDER_INITIAL_FUNDING_XTZ = 0.5
 
@@ -24,11 +29,14 @@ async function handleRegenerateConfirm(): Promise<void> {
   isRegenerating.value = true
 
   try {
-    // Generate new keypair on server (private key stays server-side)
+    // Generate new keypair on server (private key saved to disk, old signer stays active)
     const { address } = await generateKeypairOnServer()
 
-    // Update contract with new spender
+    // Update contract with new spender on-chain
     await contractStore.setSpender(address)
+
+    // On-chain tx confirmed — now activate the new signer on the MCP server
+    await activateKeyOnServer()
 
     // Fund the new spender from the contract so it can pay gas fees
     await contractStore.withdraw(address, SPENDER_INITIAL_FUNDING_XTZ)

@@ -61,21 +61,16 @@ export function createApiRouter(liveConfig: LiveConfig): Router {
 		});
 	});
 
-	// Generate keypair server-side, persist private key, return only public info
+	// Generate keypair server-side, persist private key, return only public info.
+	// Does NOT hot-reload the signer — the old key stays active until /api/activate-key
+	// is called after the on-chain setSpender tx confirms.
 	router.post('/api/generate-keypair', async (_req, res) => {
 		try {
 			const keypair = await generateKeypair();
 
-			// Save private key to persistent store
+			// Save private key to persistent store (old signer stays active)
 			savePrivateKey(keypair.secretKey);
 			log(`Generated and saved new spending keypair: ${keypair.address}`);
-
-			// If already configured (has contract), hot-reload the signer immediately.
-			// This handles key rotation — the new signer is active right away.
-			if (liveConfig.configured && liveConfig.spendingContract) {
-				await configureLiveConfig(liveConfig, keypair.secretKey, liveConfig.spendingContract);
-				log(`LiveConfig signer updated for key rotation: ${keypair.address}`);
-			}
 
 			// Return only public info — private key stays on server
 			res.json({
@@ -85,6 +80,32 @@ export function createApiRouter(liveConfig: LiveConfig): Router {
 		} catch (error) {
 			log(`Failed to generate keypair: ${error instanceof Error ? error.message : error}`);
 			res.status(500).json({ error: 'Failed to generate keypair' });
+		}
+	});
+
+	// Activate the stored key — call this after on-chain setSpender confirms
+	router.post('/api/activate-key', async (_req, res) => {
+		try {
+			const stored = loadConfig();
+			if (!stored.spendingPrivateKey) {
+				res.status(400).json({ error: 'No spending key found. Generate a keypair first.' });
+				return;
+			}
+			if (!liveConfig.spendingContract) {
+				res.status(400).json({ error: 'No contract configured. Save a contract first.' });
+				return;
+			}
+
+			const spenderAddress = await configureLiveConfig(
+				liveConfig,
+				stored.spendingPrivateKey,
+				liveConfig.spendingContract,
+			);
+			log(`LiveConfig signer activated: ${spenderAddress}`);
+			res.json({ success: true, spenderAddress });
+		} catch (error) {
+			log(`Failed to activate key: ${error instanceof Error ? error.message : error}`);
+			res.status(500).json({ error: 'Failed to activate key' });
 		}
 	});
 
