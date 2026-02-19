@@ -52,13 +52,12 @@ export function createApiRouter(liveConfig: LiveConfig): Router {
 	// All API routes are localhost-only
 	router.use('/api', localhostGuard);
 
-	// Check config status (never exposes private key)
+	// Check config status (never exposes private key or filesystem paths)
 	router.get('/api/status', (_req, res) => {
 		res.json({
 			configured: liveConfig.configured,
 			spenderAddress: liveConfig.spendingAddress || undefined,
 			contractAddress: liveConfig.spendingContract || undefined,
-			configPath: getStorePath(),
 		});
 	});
 
