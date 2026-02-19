@@ -23,7 +23,8 @@ async function activateKeyOnServer(): Promise<void> {
   if (!res.ok) throw new Error('Failed to activate key on server')
 }
 
-// Fund the new spender with enough tez for gas fees (matches SPENDER_TOP_UP_TARGET in send_xtz)
+// Fund the new spender with enough tez for gas fees.
+// Must match SPENDER_TOP_UP_TARGET in src/tools/send_xtz.ts
 const SPENDER_INITIAL_FUNDING_XTZ = 0.5
 
 async function handleRegenerateConfirm(): Promise<void> {
