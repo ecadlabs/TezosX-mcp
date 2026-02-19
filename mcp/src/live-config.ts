@@ -65,10 +65,10 @@ export async function configureLiveConfig(
  * Resets the LiveConfig to unconfigured state.
  */
 export function resetLiveConfig(config: LiveConfig, networkName?: NetworkName): void {
+	const rpcUrl = networkName ? NETWORKS[networkName].rpcUrl : config.Tezos.rpc.getRpcUrl();
+	config.Tezos = new TezosToolkit(rpcUrl);
 	if (networkName) {
-		const network = NETWORKS[networkName];
-		config.Tezos = new TezosToolkit(network.rpcUrl);
-		config.tzktApi = network.tzktApi;
+		config.tzktApi = NETWORKS[networkName].tzktApi;
 	}
 	config.spendingContract = '';
 	config.spendingAddress = '';
