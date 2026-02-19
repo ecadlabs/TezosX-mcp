@@ -1,11 +1,41 @@
-import { Router } from 'express';
+import { Router, type Request, type Response, type NextFunction } from 'express';
 import { InMemorySigner } from '@taquito/signer';
 import { b58cencode, prefix } from '@taquito/utils';
 import { randomBytes } from 'crypto';
 import { LiveConfig, configureLiveConfig, resetLiveConfig, type NetworkName, NETWORKS } from './live-config.js';
-import { savePrivateKey, saveContract, clearConfig, getStorePath } from './config-store.js';
+import { savePrivateKey, saveContract, clearConfig } from './config-store.js';
 
 const log = (msg: string) => console.error(`[tezosx-mcp] ${msg}`);
+
+const LOCALHOST_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/** Reject requests that aren't from localhost (prevents DNS rebinding and CSRF). */
+function localhostGuard(req: Request, res: Response, next: NextFunction): void {
+	const host = (req.hostname || '').toLowerCase();
+	if (!LOCALHOST_HOSTS.has(host)) {
+		log(`Blocked request from non-localhost host: ${host}`);
+		res.status(403).json({ error: 'Forbidden: API is localhost-only' });
+		return;
+	}
+
+	// CSRF check: if an Origin header is present, it must also be localhost
+	const origin = req.headers.origin;
+	if (origin) {
+		try {
+			const originHost = new URL(origin).hostname.toLowerCase();
+			if (!LOCALHOST_HOSTS.has(originHost)) {
+				log(`Blocked request with non-localhost origin: ${origin}`);
+				res.status(403).json({ error: 'Forbidden: cross-origin requests not allowed' });
+				return;
+			}
+		} catch {
+			res.status(403).json({ error: 'Forbidden: malformed Origin header' });
+			return;
+		}
+	}
+
+	next();
+}
 
 async function generateKeypair(): Promise<{ address: string; publicKey: string; secretKey: string }> {
 	const seed = randomBytes(32);
@@ -18,6 +48,9 @@ async function generateKeypair(): Promise<{ address: string; publicKey: string; 
 
 export function createApiRouter(liveConfig: LiveConfig): Router {
 	const router = Router();
+
+	// All API routes are localhost-only
+	router.use('/api', localhostGuard);
 
 	// Check config status (never exposes private key)
 	router.get('/api/status', (_req, res) => {
