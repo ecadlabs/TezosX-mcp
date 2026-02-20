@@ -64,7 +64,16 @@ async function handleOriginate(): Promise<void> {
 
     if (isLocal.value) {
       // Local: save contract address to server (completes config)
-      await saveContractOnServer(contractAddress, walletStore.networkId)
+      // Handled separately — if this fails, the contract is already on-chain
+      // and we still want to show the success screen with a retry option.
+      try {
+        await saveContractOnServer(contractAddress, walletStore.networkId)
+      } catch (err) {
+        console.error('Config save failed (contract deployed OK):', err)
+        if (contractStore.deploymentResult) {
+          contractStore.deploymentResult.configSaveFailed = true
+        }
+      }
     }
   } catch (error) {
     console.error('Deployment failed:', error)

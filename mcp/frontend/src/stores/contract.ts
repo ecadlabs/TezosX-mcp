@@ -10,6 +10,8 @@ export interface DeploymentResult {
   contractAddress: string
   /** Only present in remote mode — keypair generated client-side */
   spendingKey?: string
+  /** True when the on-chain deploy succeeded but saving config to the server failed */
+  configSaveFailed?: boolean
 }
 
 export const useContractStore = defineStore('contract', () => {

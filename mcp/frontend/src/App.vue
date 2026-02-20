@@ -90,7 +90,9 @@ onMounted(async () => {
         v-if="contractStore.deploymentResult"
         :contract-address="contractStore.deploymentResult.contractAddress"
         :spending-key="contractStore.deploymentResult.spendingKey"
+        :config-save-failed="contractStore.deploymentResult.configSaveFailed"
         @continue="contractStore.clearDeploymentResult()"
+        @config-saved="contractStore.deploymentResult!.configSaveFailed = false"
       />
 
       <!-- Setup Section (when no contract) -->
