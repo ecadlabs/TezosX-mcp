@@ -1,61 +1,86 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { InMemorySigner } from '@taquito/signer'
-import { b58cencode, prefix } from '@taquito/utils'
 import { useWalletStore, useContractStore } from '@/stores'
-import type { Keypair } from '@/types'
+import { useDeploymentMode } from '@/composables/useDeploymentMode'
+import { generateKeypairLocally } from '@/utils/keygen'
 
 const walletStore = useWalletStore()
 const contractStore = useContractStore()
+const { isLocal, detectMode } = useDeploymentMode()
 
 // Local state
 const existingContractAddress = ref('')
 const originateDailyLimit = ref('100')
 const originatePerTxLimit = ref('10')
 const isDeploying = ref(false)
+const deployError = ref('')
 
-function generateRandomBytes(length = 32): Uint8Array {
-  const array = new Uint8Array(length)
-  crypto.getRandomValues(array)
-  return array
+async function generateKeypairOnServer(): Promise<{ address: string; publicKey: string }> {
+  const res = await fetch('/api/generate-keypair', { method: 'POST' })
+  if (!res.ok) throw new Error('Failed to generate keypair on server')
+  return res.json()
 }
 
-async function generateKeypair(): Promise<Keypair> {
-  const seed = generateRandomBytes(32)
-  const secretKey = b58cencode(seed, prefix.edsk2)
-  const signer = await InMemorySigner.fromSecretKey(secretKey)
-
-  const publicKey = await signer.publicKey()
-  const address = await signer.publicKeyHash()
-
-  return {
-    address,
-    publicKey,
-    secretKey,
-  }
+async function saveContractOnServer(contractAddress: string, network: string): Promise<void> {
+  const res = await fetch('/api/save-contract', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contractAddress, network }),
+  })
+  if (!res.ok) throw new Error('Failed to save contract configuration')
 }
 
 async function handleOriginate(): Promise<void> {
   if (!walletStore.userAddress) return
 
   isDeploying.value = true
+  deployError.value = ''
 
   try {
-    // Generate keypair automatically
-    const keypair = await generateKeypair()
+    // Ensure mode detection is complete before branching on isLocal
+    await detectMode()
+
+    let spenderAddress: string
+    let spendingKey: string | undefined
+
+    if (isLocal.value) {
+      // Local: generate keypair on server (private key stays server-side)
+      const result = await generateKeypairOnServer()
+      spenderAddress = result.address
+    } else {
+      // Remote: generate keypair in browser (user copies env vars manually)
+      const keypair = await generateKeypairLocally()
+      spenderAddress = keypair.address
+      spendingKey = keypair.secretKey
+    }
 
     const dailyLimit = parseFloat(originateDailyLimit.value) || 100
     const perTxLimit = parseFloat(originatePerTxLimit.value) || 10
 
-    await contractStore.originateContract(
+    const contractAddress = await contractStore.originateContract(
       walletStore.userAddress,
-      keypair.address,
+      spenderAddress,
       dailyLimit,
       perTxLimit,
-      keypair
+      spendingKey,
     )
+
+    if (isLocal.value) {
+      // Local: save contract address to server (completes config)
+      // Handled separately — if this fails, the contract is already on-chain
+      // and we still want to show the success screen with a retry option.
+      try {
+        await saveContractOnServer(contractAddress, walletStore.networkId)
+      } catch (err) {
+        console.error('Config save failed (contract deployed OK):', err)
+        if (contractStore.deploymentResult) {
+          contractStore.deploymentResult.configSaveFailed = true
+        }
+      }
+    }
   } catch (error) {
     console.error('Deployment failed:', error)
+    deployError.value = error instanceof Error ? error.message : 'Deployment failed'
   } finally {
     isDeploying.value = false
   }
@@ -91,8 +116,14 @@ async function handleConnectContract(): Promise<void> {
     <div class="mb-5">
       <p class="text-sm font-medium text-text-primary mb-3">Deploy New Wallet Contract</p>
       <p class="text-sm text-text-muted mb-4">
-        A spending key will be automatically generated when you deploy.
-        Make sure to save the secret key and contract address - you'll need them to configure your MCP server.
+        <template v-if="isLocal">
+          A spending key will be automatically generated and saved to your MCP server.
+          No manual configuration needed.
+        </template>
+        <template v-else>
+          A spending key will be generated in your browser.
+          After deployment, you'll receive environment variables to configure your MCP server.
+        </template>
       </p>
 
       <div class="space-y-3">
@@ -115,6 +146,8 @@ async function handleConnectContract(): Promise<void> {
           <span v-if="isDeploying || contractStore.isLoading" class="spinner"></span>
           {{ !walletStore.isConnected ? 'Connect Wallet to Deploy' : isDeploying || contractStore.isLoading ? 'Deploying...' : 'Deploy Contract' }}
         </button>
+
+        <p v-if="deployError" class="text-sm text-error mt-2">{{ deployError }}</p>
       </div>
     </div>
 

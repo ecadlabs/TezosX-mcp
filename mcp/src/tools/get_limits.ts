@@ -1,5 +1,5 @@
-import { TezosToolkit } from "@taquito/taquito";
 import z from "zod";
+import type { LiveConfig } from "../live-config.js";
 
 // Constants
 const MUTEZ_PER_TEZ = 1_000_000;
@@ -17,7 +17,7 @@ interface ContractStorage {
 /** Convert mutez to XTZ */
 const mutezToXtz = (mutez: number): number => mutez / MUTEZ_PER_TEZ;
 
-export const createGetLimitsTool = (Tezos: TezosToolkit, spendingContract: string) => ({
+export const createGetLimitsTool = (config: LiveConfig) => ({
 	name: "tezos_get_limits",
 	config: {
 		title: "Get Spending Limits",
@@ -32,6 +32,7 @@ export const createGetLimitsTool = (Tezos: TezosToolkit, spendingContract: strin
 		},
 	},
 	handler: async () => {
+		const { Tezos, spendingContract } = config;
 		const contract = await Tezos.contract.at(spendingContract);
 		const storage = (await contract.storage()) as ContractStorage;
 

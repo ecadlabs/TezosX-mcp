@@ -1,11 +1,7 @@
-import { TezosToolkit } from "@taquito/taquito";
 import z from "zod";
+import type { LiveConfig } from "../live-config.js";
 
-export const createGetBalanceTool = (
-	Tezos: TezosToolkit,
-	spendingContract: string,
-	spendingAddress: string
-) => ({
+export const createGetBalanceTool = (config: LiveConfig) => ({
 	name: "tezos_get_balance",
 	config:
 	{
@@ -21,6 +17,7 @@ export const createGetBalanceTool = (
 	},
 	handler: async () => {
 		try {
+			const { Tezos, spendingContract, spendingAddress } = config;
 			const spendingAddressBalance = (await Tezos.tz.getBalance(spendingAddress)).toString();
 			const spendingContractBalance = (await Tezos.tz.getBalance(spendingContract)).toString();
 

@@ -1,13 +1,11 @@
-import { TezosToolkit } from "@taquito/taquito";
 import z from "zod";
 import axios, { AxiosRequestConfig } from "axios";
 import { X402ResponseSchema } from "./x402/types.js";
 import { signX402Payment } from "./x402/sign.js";
 import { ensureRevealed } from "./reveal_account.js";
+import type { LiveConfig } from "../live-config.js";
 
-export const createFetchWithX402Tool = (
-	Tezos: TezosToolkit,
-) => ({
+export const createFetchWithX402Tool = (config: LiveConfig) => ({
 	name: "tezos_fetch_with_x402",
 	config: {
 		title: "Fetch with x402 Payment",
@@ -27,6 +25,7 @@ export const createFetchWithX402Tool = (
 		}
 	},
 	handler: async (params: any) => {
+		const { Tezos } = config;
 		const { url, maxAmountMutez, method = "GET", body, nftRecipientAddress } = params as {
 			url: string;
 			maxAmountMutez: string;

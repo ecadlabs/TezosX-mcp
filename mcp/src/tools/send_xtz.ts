@@ -1,6 +1,6 @@
-import { TezosToolkit } from "@taquito/taquito";
 import z from "zod";
 import { ensureRevealed } from "./reveal_account.js";
+import type { LiveConfig } from "../live-config.js";
 
 // Constants
 const MUTEZ_PER_TEZ = 1_000_000;
@@ -25,18 +25,10 @@ const xtzToMutez = (xtz: number): number => xtz * MUTEZ_PER_TEZ;
 /** Format mutez for display */
 const formatMutez = (mutez: number): string => `${mutez} mutez`;
 
-/**
- * MCP tool for sending XTZ via a spending contract.
- *
- * @param Tezos - Configured TezosToolkit instance (with signer set to spender key)
- * @param spendingContract - Address of the spending-limited wallet contract
- * @param spendingAddress - Address of the spender account (for fee payments)
- */
-export const createSendXtzTool = (
-	Tezos: TezosToolkit,
-	spendingContract: string,
-	spendingAddress: string
-) => ({
+// Cache the last-verified spender so we only hit the chain when config changes
+let verifiedSpender: { address: string; contract: string } | null = null;
+
+export const createSendXtzTool = (config: LiveConfig) => ({
 	name: "tezos_send_xtz",
 	config: {
 		title: "Send Tez",
@@ -51,7 +43,27 @@ export const createSendXtzTool = (
 	},
 
 	handler: async (params: any) => {
-		params = params as SendXtzParams; 
+		params = params as SendXtzParams;
+		const { Tezos, spendingContract, spendingAddress } = config;
+
+		// Verify the server's signer matches the on-chain spender (only when config changes)
+		const needsVerify = !verifiedSpender
+			|| verifiedSpender.address !== spendingAddress
+			|| verifiedSpender.contract !== spendingContract;
+
+		if (needsVerify) {
+			const c = await Tezos.contract.at(spendingContract);
+			const storage = await c.storage<{ spender: string }>();
+			if (storage.spender !== spendingAddress) {
+				throw new Error(
+					`Spender mismatch: the server's signing key (${spendingAddress}) does not match ` +
+					`the contract's spender (${storage.spender}). ` +
+					`Please regenerate the spender key from the dashboard.`
+				);
+			}
+			verifiedSpender = { address: spendingAddress, contract: spendingContract };
+		}
+
 		// Validate spender has funds for fees
 		const spenderBalance = await Tezos.tz.getBalance(spendingAddress);
 		if (spenderBalance.isZero()) {
@@ -77,14 +89,13 @@ export const createSendXtzTool = (
 		// simulates via RPC without handling revelation — so we reveal first.
 		await ensureRevealed(Tezos);
 
-		const contract = await Tezos.contract.at(spendingContract);
-
 		// Top up spender from contract if balance is low
 		const spenderMutez = spenderBalance.toNumber();
 		const feeRebate = spenderMutez < SPENDER_TOP_UP_THRESHOLD
 			? SPENDER_TOP_UP_TARGET - spenderMutez
 			: 0;
 
+		const contract = await Tezos.contract.at(spendingContract);
 		const contractCall = contract.methodsObject.spend({
 			recipient: params.toAddress,
 			amount: amountMutez,

@@ -3,12 +3,15 @@ import { ref, shallowRef, computed } from 'vue'
 import type { ContractAbstraction, Wallet } from '@taquito/taquito'
 import { useWalletStore } from './wallet'
 import { xtzToMutez } from '@/utils'
-import type { ContractStorage, TimeUntilReset, RawContractStorage, Keypair } from '@/types'
+import type { ContractStorage, TimeUntilReset, RawContractStorage } from '@/types'
 import CONTRACT_CODE from '../../contract/spending-limited-wallet.tz?raw'
 
 export interface DeploymentResult {
   contractAddress: string
-  keypair: Keypair
+  /** Only present in remote mode — keypair generated client-side */
+  spendingKey?: string
+  /** True when the on-chain deploy succeeded but saving config to the server failed */
+  configSaveFailed?: boolean
 }
 
 export const useContractStore = defineStore('contract', () => {
@@ -131,7 +134,7 @@ export const useContractStore = defineStore('contract', () => {
     spenderAddress: string,
     dailyLimitXtz: number,
     perTxLimitXtz: number,
-    keypair?: Keypair
+    spendingKey?: string,
   ): Promise<string> {
     await walletStore.init()
     const tezos = walletStore.getTezos()
@@ -160,12 +163,7 @@ export const useContractStore = defineStore('contract', () => {
       const originatedContract = await originationOp.contract()
       const address = originatedContract.address
 
-      // If keypair provided, store deployment result for success screen
-      if (keypair) {
-        deploymentResult.value = { contractAddress: address, keypair }
-      } else {
-        await setContractAddress(address)
-      }
+      deploymentResult.value = { contractAddress: address, spendingKey }
 
       return address
     } catch (err) {

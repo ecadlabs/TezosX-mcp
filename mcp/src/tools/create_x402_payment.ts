@@ -1,10 +1,8 @@
-import { TezosToolkit } from "@taquito/taquito";
 import z from "zod";
 import { signX402Payment } from "./x402/sign.js";
+import type { LiveConfig } from "../live-config.js";
 
-export const createCreateX402PaymentTool = (
-	Tezos: TezosToolkit,
-) => ({
+export const createCreateX402PaymentTool = (config: LiveConfig) => ({
 	name: "tezos_create_x402_payment",
 	config: {
 		title: "Create x402 Payment",
@@ -23,6 +21,7 @@ export const createCreateX402PaymentTool = (
 		}
 	},
 	handler: async (params: any) => {
+		const { Tezos } = config;
 		const { network, asset, amount, recipient } = params as {
 			network: string;
 			asset: string;

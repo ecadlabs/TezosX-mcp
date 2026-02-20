@@ -1,5 +1,6 @@
 import axios from "axios";
 import z from "zod";
+import type { LiveConfig } from "../live-config.js";
 
 interface TzktOperation {
 	id: number;
@@ -16,7 +17,7 @@ interface TzktOperation {
 	};
 }
 
-export const createGetOperationHistoryTool = (spendingContract: string, tzktApi: string) => ({
+export const createGetOperationHistoryTool = (config: LiveConfig) => ({
 	name: "tezos_get_operation_history",
 	config: {
 		title: "Get Operation History",
@@ -32,6 +33,7 @@ export const createGetOperationHistoryTool = (spendingContract: string, tzktApi:
 	},
 	handler: async () => {
 		try {
+			const { spendingContract, tzktApi } = config;
 			const url = `${tzktApi}/v1/accounts/${spendingContract}/operations?type=transaction&limit=100`;
 			const response = await axios.get<TzktOperation[]>(url);
 			const allOperations = response.data;

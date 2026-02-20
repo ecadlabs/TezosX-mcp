@@ -21,18 +21,6 @@ export interface ContractStorage {
 }
 
 /**
- * Generated Ed25519 keypair for spending
- */
-export interface Keypair {
-  /** Public key hash (tz1...) */
-  address: string
-  /** Public key (edpk...) */
-  publicKey: string
-  /** Secret key (edsk...) - keep secure! */
-  secretKey: string
-}
-
-/**
  * Time remaining until daily spending reset
  */
 export interface TimeUntilReset {
