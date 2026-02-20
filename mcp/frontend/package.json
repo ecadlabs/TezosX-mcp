@@ -7,7 +7,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "type-check": "vue-tsc --noEmit",
-    "compile": "tsx contract/compile.ts"
+    "compile": "tsx contract/compile.ts",
+    "deploy": "wrangler pages deploy",
+    "deploy:preview": "wrangler pages deploy --branch preview"
   },
   "dependencies": {
     "@airgap/beacon-sdk": "^4.2.2",
@@ -31,6 +33,7 @@
     "tsx": "^4.20.6",
     "typescript": "~5.3.3",
     "vite": "^5.1.6",
-    "vue-tsc": "^2.0.6"
+    "vue-tsc": "^2.0.6",
+    "wrangler": "^4.67.0"
   }
 }
