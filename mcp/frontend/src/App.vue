@@ -2,6 +2,7 @@
 import { onMounted } from 'vue'
 import { useWalletStore, useContractStore } from '@/stores'
 import { NETWORKS, type NetworkId } from '@/utils'
+import { useDeploymentMode } from '@/composables/useDeploymentMode'
 
 // Components
 import WalletConnection from './components/WalletConnection.vue'
@@ -14,6 +15,7 @@ import WithdrawFunds from './components/WithdrawFunds.vue'
 
 const walletStore = useWalletStore()
 const contractStore = useContractStore()
+const { detectMode } = useDeploymentMode()
 
 const networkOptions = Object.entries(NETWORKS).map(([id, config]) => ({
   id: id as NetworkId,
@@ -27,6 +29,8 @@ async function handleNetworkChange(event: Event): Promise<void> {
 }
 
 onMounted(async () => {
+  detectMode()
+
   const params = new URLSearchParams(window.location.search)
 
   // Handle network param before wallet init
@@ -85,6 +89,7 @@ onMounted(async () => {
       <DeploymentSuccess
         v-if="contractStore.deploymentResult"
         :contract-address="contractStore.deploymentResult.contractAddress"
+        :spending-key="contractStore.deploymentResult.spendingKey"
         @continue="contractStore.clearDeploymentResult()"
       />
 

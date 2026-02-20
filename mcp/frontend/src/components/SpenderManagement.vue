@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useContractStore } from '@/stores'
+import { copyToClipboard } from '@/utils'
+import { useDeploymentMode } from '@/composables/useDeploymentMode'
+import { generateKeypairLocally } from '@/utils/keygen'
 import ConfirmationModal from './ConfirmationModal.vue'
 
 const contractStore = useContractStore()
+const { isLocal } = useDeploymentMode()
 
 // State
 const showConfirmModal = ref(false)
@@ -11,6 +15,9 @@ const isRegenerating = ref(false)
 const rotationSuccess = ref(false)
 const fundingFailed = ref(false)
 const newSpenderAddress = ref('')
+const newSpendingKey = ref('')
+const showSecret = ref(false)
+const copyFeedback = ref('')
 
 async function generateKeypairOnServer(): Promise<{ address: string; publicKey: string }> {
   const res = await fetch('/api/generate-keypair', { method: 'POST' })
@@ -27,18 +34,36 @@ async function activateKeyOnServer(): Promise<void> {
 // Must match SPENDER_TOP_UP_TARGET in src/tools/send_xtz.ts
 const SPENDER_INITIAL_FUNDING_XTZ = 0.5
 
+async function handleCopy(text: string, label: string): Promise<void> {
+  await copyToClipboard(text)
+  copyFeedback.value = label
+  setTimeout(() => { copyFeedback.value = '' }, 2000)
+}
+
 async function handleRegenerateConfirm(): Promise<void> {
   isRegenerating.value = true
 
   try {
-    // Generate new keypair on server (private key saved to disk, old signer stays active)
-    const { address } = await generateKeypairOnServer()
+    let address: string
 
-    // Update contract with new spender on-chain
+    if (isLocal.value) {
+      // Local: server generates keypair, private key stays server-side
+      const result = await generateKeypairOnServer()
+      address = result.address
+    } else {
+      // Remote: generate keypair in browser
+      const keypair = await generateKeypairLocally()
+      address = keypair.address
+      newSpendingKey.value = keypair.secretKey
+    }
+
+    // Update contract with new spender on-chain (same for both modes)
     await contractStore.setSpender(address)
 
-    // On-chain tx confirmed — now activate the new signer on the MCP server
-    await activateKeyOnServer()
+    if (isLocal.value) {
+      // On-chain tx confirmed — now activate the new signer on the MCP server
+      await activateKeyOnServer()
+    }
 
     // Try to fund the new spender — not critical, rotation is already complete
     try {
@@ -63,6 +88,8 @@ function handleDone(): void {
   rotationSuccess.value = false
   fundingFailed.value = false
   newSpenderAddress.value = ''
+  newSpendingKey.value = ''
+  showSecret.value = false
 }
 </script>
 
@@ -81,9 +108,46 @@ function handleDone(): void {
         <span class="font-semibold text-green-800">Spender Updated Successfully</span>
       </div>
 
-      <p class="text-sm text-green-700 mb-3">
+      <!-- Local: auto-configured message -->
+      <p v-if="isLocal" class="text-sm text-green-700 mb-3">
         Your MCP server has been automatically updated with the new spending key. No manual configuration needed.
       </p>
+
+      <!-- Remote: show new spending key -->
+      <div v-else class="mb-3">
+        <p class="text-sm text-amber-700 mb-3">
+          Update the <code class="mono text-xs bg-amber-100 px-1 py-0.5 rounded">SPENDING_PRIVATE_KEY</code>
+          environment variable on your MCP server with the new key below.
+          The key won't be shown again after you leave this page.
+        </p>
+        <div>
+          <label class="label">new spending key</label>
+          <div class="flex items-stretch gap-2">
+            <code class="mono bg-white px-2 py-1.5 rounded flex-1 break-all text-sm border border-amber-200 flex items-center">
+              {{ showSecret ? newSpendingKey : newSpendingKey.slice(0, 4) + '\u2022'.repeat(24) }}
+            </code>
+            <button
+              @click="showSecret = !showSecret"
+              class="btn-secondary !py-1.5 !px-2 text-xs"
+              :title="showSecret ? 'Hide spending key' : 'Show spending key'"
+            >
+              <svg v-if="!showSecret" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+              </svg>
+            </button>
+            <button
+              @click="handleCopy(newSpendingKey, 'key')"
+              class="btn-secondary !py-1.5 !px-2 text-xs"
+            >
+              {{ copyFeedback === 'key' ? 'Copied!' : 'Copy' }}
+            </button>
+          </div>
+        </div>
+      </div>
 
       <!-- Warning if funding failed -->
       <div v-if="fundingFailed" class="p-3 mb-3 rounded border border-amber-200 bg-amber-50/50">
@@ -119,10 +183,17 @@ function handleDone(): void {
         <div>
           <p class="text-sm font-medium text-amber-800 mb-1">Regenerate Spender Keypair</p>
           <p class="text-sm text-amber-700">
-            This will generate a new spending keypair, update the contract, and fund the new
-            spender with {{ SPENDER_INITIAL_FUNDING_XTZ }} XTZ for gas fees.
+            This will generate a new spending keypair and update the contract.
+            <template v-if="isLocal">
+              The new spender will be funded with {{ SPENDER_INITIAL_FUNDING_XTZ }} XTZ for gas fees.
+            </template>
             The current spender key will <strong>stop working immediately</strong>.
-            Your MCP server will be updated automatically.
+            <template v-if="isLocal">
+              Your MCP server will be updated automatically.
+            </template>
+            <template v-else>
+              You will need to update the <code class="mono text-xs bg-amber-100 px-1 py-0.5 rounded">SPENDING_PRIVATE_KEY</code> environment variable on your MCP server.
+            </template>
           </p>
         </div>
       </div>
@@ -143,7 +214,9 @@ function handleDone(): void {
     <ConfirmationModal
       v-if="showConfirmModal"
       title="Regenerate Spender Key?"
-      :message="`This action cannot be undone. The current spender key will be invalidated immediately and any services using it will lose access. The new spender will be funded with ${SPENDER_INITIAL_FUNDING_XTZ} XTZ from the contract for gas fees.`"
+      :message="isLocal
+        ? `This action cannot be undone. The current spender key will be invalidated immediately and any services using it will lose access. The new spender will be funded with ${SPENDER_INITIAL_FUNDING_XTZ} XTZ from the contract for gas fees.`
+        : 'This action cannot be undone. The current spender key will be invalidated immediately and any services using it will lose access. You will need to update the SPENDING_PRIVATE_KEY environment variable on your MCP server.'"
       confirm-text="Regenerate"
       cancel-text="Cancel"
       variant="danger"

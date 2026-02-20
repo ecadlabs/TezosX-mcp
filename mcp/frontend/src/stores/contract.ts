@@ -8,6 +8,8 @@ import CONTRACT_CODE from '../../contract/spending-limited-wallet.tz?raw'
 
 export interface DeploymentResult {
   contractAddress: string
+  /** Only present in remote mode — keypair generated client-side */
+  spendingKey?: string
 }
 
 export const useContractStore = defineStore('contract', () => {
@@ -130,6 +132,7 @@ export const useContractStore = defineStore('contract', () => {
     spenderAddress: string,
     dailyLimitXtz: number,
     perTxLimitXtz: number,
+    spendingKey?: string,
   ): Promise<string> {
     await walletStore.init()
     const tezos = walletStore.getTezos()
@@ -158,7 +161,7 @@ export const useContractStore = defineStore('contract', () => {
       const originatedContract = await originationOp.contract()
       const address = originatedContract.address
 
-      deploymentResult.value = { contractAddress: address }
+      deploymentResult.value = { contractAddress: address, spendingKey }
 
       return address
     } catch (err) {

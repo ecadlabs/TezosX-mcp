@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useWalletStore, useContractStore } from '@/stores'
+import { useDeploymentMode } from '@/composables/useDeploymentMode'
+import { generateKeypairLocally } from '@/utils/keygen'
 
 const walletStore = useWalletStore()
 const contractStore = useContractStore()
+const { isLocal } = useDeploymentMode()
 
 // Local state
 const existingContractAddress = ref('')
@@ -34,8 +37,19 @@ async function handleOriginate(): Promise<void> {
   deployError.value = ''
 
   try {
-    // Generate keypair on server (private key stays server-side)
-    const { address: spenderAddress } = await generateKeypairOnServer()
+    let spenderAddress: string
+    let spendingKey: string | undefined
+
+    if (isLocal.value) {
+      // Local: generate keypair on server (private key stays server-side)
+      const result = await generateKeypairOnServer()
+      spenderAddress = result.address
+    } else {
+      // Remote: generate keypair in browser (user copies env vars manually)
+      const keypair = await generateKeypairLocally()
+      spenderAddress = keypair.address
+      spendingKey = keypair.secretKey
+    }
 
     const dailyLimit = parseFloat(originateDailyLimit.value) || 100
     const perTxLimit = parseFloat(originatePerTxLimit.value) || 10
@@ -45,10 +59,13 @@ async function handleOriginate(): Promise<void> {
       spenderAddress,
       dailyLimit,
       perTxLimit,
+      spendingKey,
     )
 
-    // Save contract address to server (completes config)
-    await saveContractOnServer(contractAddress, walletStore.networkId)
+    if (isLocal.value) {
+      // Local: save contract address to server (completes config)
+      await saveContractOnServer(contractAddress, walletStore.networkId)
+    }
   } catch (error) {
     console.error('Deployment failed:', error)
     deployError.value = error instanceof Error ? error.message : 'Deployment failed'
@@ -87,8 +104,14 @@ async function handleConnectContract(): Promise<void> {
     <div class="mb-5">
       <p class="text-sm font-medium text-text-primary mb-3">Deploy New Wallet Contract</p>
       <p class="text-sm text-text-muted mb-4">
-        A spending key will be automatically generated and saved to your MCP server.
-        No manual configuration needed.
+        <template v-if="isLocal">
+          A spending key will be automatically generated and saved to your MCP server.
+          No manual configuration needed.
+        </template>
+        <template v-else>
+          A spending key will be generated in your browser.
+          After deployment, you'll receive environment variables to configure your MCP server.
+        </template>
       </p>
 
       <div class="space-y-3">
