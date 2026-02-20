@@ -25,6 +25,7 @@ export function useDeploymentMode() {
   return {
     isLocal,
     isRemote: computed(() => isLocal.value === false),
+    ready: computed(() => isLocal.value !== null),
     detectMode,
   }
 }

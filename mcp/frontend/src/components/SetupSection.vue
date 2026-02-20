@@ -6,7 +6,7 @@ import { generateKeypairLocally } from '@/utils/keygen'
 
 const walletStore = useWalletStore()
 const contractStore = useContractStore()
-const { isLocal } = useDeploymentMode()
+const { isLocal, detectMode } = useDeploymentMode()
 
 // Local state
 const existingContractAddress = ref('')
@@ -37,6 +37,9 @@ async function handleOriginate(): Promise<void> {
   deployError.value = ''
 
   try {
+    // Ensure mode detection is complete before branching on isLocal
+    await detectMode()
+
     let spenderAddress: string
     let spendingKey: string | undefined
 

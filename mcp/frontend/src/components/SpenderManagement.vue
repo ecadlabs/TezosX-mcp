@@ -7,7 +7,7 @@ import { generateKeypairLocally } from '@/utils/keygen'
 import ConfirmationModal from './ConfirmationModal.vue'
 
 const contractStore = useContractStore()
-const { isLocal } = useDeploymentMode()
+const { isLocal, detectMode } = useDeploymentMode()
 
 // State
 const showConfirmModal = ref(false)
@@ -44,6 +44,9 @@ async function handleRegenerateConfirm(): Promise<void> {
   isRegenerating.value = true
 
   try {
+    // Ensure mode detection is complete before branching on isLocal
+    await detectMode()
+
     let address: string
 
     if (isLocal.value) {
