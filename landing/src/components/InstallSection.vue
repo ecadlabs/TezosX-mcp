@@ -195,6 +195,18 @@ const codeSelfHosted = `{
               <CodeBlock label="claude_desktop_config.json" :code="codeSelfHosted" />
             </div>
           </div>
+          <div class="flex gap-3.5 items-start">
+            <div
+              class="w-[26px] h-[26px] rounded-full shrink-0 flex items-center justify-center font-mono text-xs font-semibold transition-all duration-300 bg-accent/[0.12] text-accent">
+              5
+            </div>
+            <div class="flex-1">
+              <p class="text-text-secondary text-sm font-medium mb-2">Restart Claude Desktop</p>
+              <p class="text-text-muted text-[13px] leading-[1.6]">
+                You're good to go!
+              </p>
+            </div>
+          </div>
         </div>
 
         <!-- Hosted -->
@@ -235,6 +247,18 @@ const codeSelfHosted = `{
             <div class="flex-1">
               <p class="text-text-secondary text-sm font-medium mb-2">Add your copied variables to your Claude Config</p>
               <CodeBlock label="claude_desktop_config.json" :code="codeLocalWithRemoteDashboard" />
+            </div>
+          </div>
+          <div class="flex gap-3.5 items-start">
+            <div
+              class="w-[26px] h-[26px] rounded-full shrink-0 flex items-center justify-center font-mono text-xs font-semibold transition-all duration-300 bg-accent/[0.12] text-accent">
+              4
+            </div>
+            <div class="flex-1">
+              <p class="text-text-secondary text-sm font-medium mb-2">Restart Claude Desktop</p>
+              <p class="text-text-muted text-[13px] leading-[1.6]">
+                You're good to go!
+              </p>
             </div>
           </div>
         </div>
