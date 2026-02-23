@@ -118,27 +118,25 @@ export const createFetchWithX402Tool = (config: LiveConfig) => ({
 			);
 		}
 
-		// Get source address from signer
-		const source = await Tezos.signer.publicKeyHash();
-
-		// Validate source has sufficient funds
-		const sourceBalance = await Tezos.tz.getBalance(source);
-		if (sourceBalance.toNumber() < requiredAmount + 10000) { // Add buffer for fees
+		// Validate contract has sufficient funds for the payment
+		const contractBalance = await Tezos.tz.getBalance(config.spendingContract);
+		if (contractBalance.toNumber() < requiredAmount) {
 			throw new Error(
-				`Insufficient balance. ` +
-				`Required: ${requiredAmount + 10000} mutez (including fees), ` +
-				`Available: ${sourceBalance.toNumber()} mutez`
+				`Insufficient contract balance. ` +
+				`Required: ${requiredAmount} mutez, ` +
+				`Available: ${contractBalance.toNumber()} mutez`
 			);
 		}
 
 		// Ensure account is revealed before signing
 		await ensureRevealed(Tezos);
 
-		// Sign the payment using shared utility
+		// Sign the payment as a contract call to the spending wallet
 		const signed = await signX402Payment(Tezos, {
 			network: tezosRequirement.network,
 			amount: requiredAmount,
 			recipient: tezosRequirement.recipient,
+			spendingContract: config.spendingContract,
 		});
 
 		// Retry with payment header

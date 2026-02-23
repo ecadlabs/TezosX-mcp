@@ -1,13 +1,11 @@
 import z from "zod";
 import { ensureRevealed } from "./reveal_account.js";
-import type { LiveConfig } from "../live-config.js";
+import { calculateFeeRebate, type LiveConfig } from "../live-config.js";
 
 // Constants
 const MUTEZ_PER_TEZ = 1_000_000;
 const CONFIRMATIONS_TO_WAIT = 3;
 const TZKT_BASE_URL = "https://shadownet.tzkt.io";
-const SPENDER_TOP_UP_THRESHOLD = 250_000; // 0.25 XTZ
-const SPENDER_TOP_UP_TARGET = 500_000;    // 0.5 XTZ
 
 // Types
 const inputSchema = z.object({
@@ -91,9 +89,7 @@ export const createSendXtzTool = (config: LiveConfig) => ({
 
 		// Top up spender from contract if balance is low
 		const spenderMutez = spenderBalance.toNumber();
-		const feeRebate = spenderMutez < SPENDER_TOP_UP_THRESHOLD
-			? SPENDER_TOP_UP_TARGET - spenderMutez
-			: 0;
+		const feeRebate = calculateFeeRebate(spenderMutez);
 
 		const contract = await Tezos.contract.at(spendingContract);
 		const contractCall = contract.methodsObject.spend({
