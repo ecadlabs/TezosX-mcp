@@ -82,6 +82,15 @@ onMounted(async () => {
         </select>
       </header>
 
+      <!-- Testnet Warning -->
+      <div
+        v-if="walletStore.networkId !== 'mainnet'"
+        class="mb-4 px-4 py-2.5 rounded-lg bg-warning/10 border border-warning/20 flex items-center gap-2 text-sm text-warning"
+      >
+        <span class="font-medium">Testnet</span>
+        <span class="text-warning/70">You're connected to {{ walletStore.currentNetwork.name }}. Funds on this network have no real value.</span>
+      </div>
+
       <!-- Wallet Connection -->
       <WalletConnection />
 
