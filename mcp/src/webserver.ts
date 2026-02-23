@@ -18,5 +18,29 @@ export const startWebServer = (port: number, apiRouter?: Router) => {
 	const distPath = join(__dirname, "../frontend/dist");
 	app.use(sirv(distPath, { single: true }));
 
-	app.listen(port);
+	let retries = 0;
+	const maxRetries = 3;
+
+	const tryListen = () => {
+		const server = app.listen(port);
+		server.on("error", (err: NodeJS.ErrnoException) => {
+			if (err.code === "EADDRINUSE" && retries < maxRetries) {
+				retries++;
+				console.error(`[tezosx-mcp] Port ${port} in use, retrying (${retries}/${maxRetries})...`);
+				setTimeout(tryListen, 500);
+			} else if (err.code === "EADDRINUSE") {
+				console.error(`[tezosx-mcp] Port ${port} in use, frontend dashboard unavailable`);
+			} else {
+				console.error(`[tezosx-mcp] Web server error:`, err.message);
+			}
+		});
+		server.on("listening", () => {
+			const shutdown = () => server.close();
+			process.on("SIGTERM", shutdown);
+			process.on("SIGINT", shutdown);
+			process.on("exit", shutdown);
+		});
+	};
+
+	tryListen();
 };

@@ -193,7 +193,42 @@ export async function decodeOperationBytes(
 }
 
 /**
- * Validate decoded operation against requirements
+ * Check if a decoded transaction is a contract call to a spending wallet's spend entrypoint.
+ */
+function isSpendContractCall(tx: DecodedTransaction): boolean {
+  return !!tx.parameters && tx.parameters.entrypoint === 'spend';
+}
+
+/**
+ * Flatten a Micheline Pair tree into its leaf values.
+ * Handles both flat combs { Pair, args: [a, b, c] } and nested { Pair, args: [a, { Pair, args: [b, c] }] }.
+ */
+function flattenPairArgs(value: unknown): Record<string, unknown>[] {
+  if (!value || typeof value !== 'object') return [value as Record<string, unknown>];
+  const v = value as Record<string, unknown>;
+  if (v.prim !== 'Pair' || !Array.isArray(v.args)) return [v];
+  return (v.args as unknown[]).flatMap(flattenPairArgs);
+}
+
+/**
+ * Extract recipient and amount from a spending contract's spend entrypoint parameters.
+ * The spend entrypoint has type: (pair %spend (address %recipient) (mutez %amount) (mutez %fee_rebate))
+ * Leaf order after flattening is always: [recipient, amount, fee_rebate]
+ */
+function extractSpendParams(value: unknown): { recipient: string; amount: string } | null {
+  const leaves = flattenPairArgs(value);
+  if (leaves.length < 2) return null;
+
+  const recipient = leaves[0]?.string as string | undefined;
+  const amount = leaves[1]?.int as string | undefined;
+  if (!recipient || !amount) return null;
+
+  return { recipient, amount };
+}
+
+/**
+ * Validate decoded operation against requirements.
+ * Supports both direct transfers and spending contract calls.
  */
 export function validateOperationAgainstRequirements(
   decoded: DecodedOperation,
@@ -210,23 +245,48 @@ export function validateOperationAgainstRequirements(
     };
   }
 
-  // Check recipient matches
-  if (tx.destination !== requirements.recipient) {
-    return {
-      valid: false,
-      reason: `Recipient mismatch. Expected ${requirements.recipient}, got ${tx.destination}`,
-    };
-  }
+  if (isSpendContractCall(tx)) {
+    // Contract call: extract recipient and amount from parameters
+    const spendParams = extractSpendParams(tx.parameters!.value);
+    if (!spendParams) {
+      return {
+        valid: false,
+        reason: 'Failed to parse spend entrypoint parameters',
+      };
+    }
 
-  // Check amount matches (both are in mutez as strings)
-  const txAmount = BigInt(tx.amount);
-  const requiredAmount = BigInt(requirements.amount);
+    if (spendParams.recipient !== requirements.recipient) {
+      return {
+        valid: false,
+        reason: `Recipient mismatch. Expected ${requirements.recipient}, got ${spendParams.recipient}`,
+      };
+    }
 
-  if (txAmount < requiredAmount) {
-    return {
-      valid: false,
-      reason: `Amount insufficient. Required ${requirements.amount} mutez, got ${tx.amount} mutez`,
-    };
+    const paramAmount = BigInt(spendParams.amount);
+    const requiredAmount = BigInt(requirements.amount);
+    if (paramAmount < requiredAmount) {
+      return {
+        valid: false,
+        reason: `Amount insufficient. Required ${requirements.amount} mutez, got ${spendParams.amount} mutez`,
+      };
+    }
+  } else {
+    // Direct transfer: validate destination and amount directly
+    if (tx.destination !== requirements.recipient) {
+      return {
+        valid: false,
+        reason: `Recipient mismatch. Expected ${requirements.recipient}, got ${tx.destination}`,
+      };
+    }
+
+    const txAmount = BigInt(tx.amount);
+    const requiredAmount = BigInt(requirements.amount);
+    if (txAmount < requiredAmount) {
+      return {
+        valid: false,
+        reason: `Amount insufficient. Required ${requirements.amount} mutez, got ${tx.amount} mutez`,
+      };
+    }
   }
 
   return { valid: true };
@@ -285,19 +345,41 @@ export async function validatePayment(
 
   // Step 6: Check balance
   const tx = decoded.contents[0] as DecodedTransaction;
-  const requiredBalance =
-    BigInt(tx.amount) + BigInt(tx.fee) + ESTIMATED_FEES_BUFFER;
 
-  const { sufficient, balance } = await tezosService.hasSufficientBalance(
-    payload.source,
-    requiredBalance
-  );
+  if (isSpendContractCall(tx)) {
+    // Contract call: source only needs fees, contract needs the payment amount
+    const requiredFees = BigInt(tx.fee) + ESTIMATED_FEES_BUFFER;
+    const { sufficient: feeSufficient, balance: feeBalance } =
+      await tezosService.hasSufficientBalance(payload.source, requiredFees);
+    if (!feeSufficient) {
+      return {
+        valid: false,
+        reason: `Insufficient spender balance for fees. Required ${requiredFees} mutez, has ${feeBalance} mutez`,
+      };
+    }
 
-  if (!sufficient) {
-    return {
-      valid: false,
-      reason: `Insufficient balance. Required ${requiredBalance} mutez (including fees), has ${balance} mutez`,
-    };
+    const { sufficient: contractSufficient, balance: contractBalance } =
+      await tezosService.hasSufficientBalance(tx.destination, BigInt(requirements.amount));
+    if (!contractSufficient) {
+      return {
+        valid: false,
+        reason: `Insufficient contract balance. Required ${requirements.amount} mutez, has ${contractBalance} mutez`,
+      };
+    }
+  } else {
+    // Direct transfer: source needs amount + fees
+    const requiredBalance =
+      BigInt(tx.amount) + BigInt(tx.fee) + ESTIMATED_FEES_BUFFER;
+    const { sufficient, balance } = await tezosService.hasSufficientBalance(
+      payload.source,
+      requiredBalance
+    );
+    if (!sufficient) {
+      return {
+        valid: false,
+        reason: `Insufficient balance. Required ${requiredBalance} mutez (including fees), has ${balance} mutez`,
+      };
+    }
   }
 
   // Step 7: Add to seen operations

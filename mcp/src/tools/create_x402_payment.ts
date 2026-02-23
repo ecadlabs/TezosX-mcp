@@ -39,16 +39,13 @@ export const createCreateX402PaymentTool = (config: LiveConfig) => ({
 			throw new Error(`Invalid amount: ${amount}. Must be a positive integer in mutez.`);
 		}
 
-		// Get source address from signer
-		const source = await Tezos.signer.publicKeyHash();
-
-		// Validate source has sufficient funds
-		const sourceBalance = await Tezos.tz.getBalance(source);
-		if (sourceBalance.toNumber() < amountMutez + 10000) { // Add buffer for fees
+		// Validate contract has sufficient funds for the payment
+		const contractBalance = await Tezos.tz.getBalance(config.spendingContract);
+		if (contractBalance.toNumber() < amountMutez) {
 			throw new Error(
-				`Insufficient balance. ` +
-				`Required: ${amountMutez + 10000} mutez (including fees), ` +
-				`Available: ${sourceBalance.toNumber()} mutez`
+				`Insufficient contract balance. ` +
+				`Required: ${amountMutez} mutez, ` +
+				`Available: ${contractBalance.toNumber()} mutez`
 			);
 		}
 
@@ -56,6 +53,7 @@ export const createCreateX402PaymentTool = (config: LiveConfig) => ({
 			network,
 			amount: amountMutez,
 			recipient,
+			spendingContract: config.spendingContract,
 		});
 
 		return {

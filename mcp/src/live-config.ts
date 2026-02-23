@@ -9,6 +9,22 @@ export interface LiveConfig {
 	configured: boolean;
 }
 
+// Spender fee rebate thresholds (in mutez)
+const SPENDER_TOP_UP_THRESHOLD = 250_000; // 0.25 XTZ — rebate when below this
+const SPENDER_TOP_UP_TARGET = 500_000;    // 0.5 XTZ — rebate up to this level
+
+/**
+ * Calculate the fee rebate amount to keep the spender address funded for gas.
+ * Returns 0 if the spender has sufficient balance, otherwise the amount needed
+ * to bring the balance up to the target level.
+ */
+export function calculateFeeRebate(spenderBalanceMutez: number): number {
+	if (spenderBalanceMutez < SPENDER_TOP_UP_THRESHOLD) {
+		return SPENDER_TOP_UP_TARGET - spenderBalanceMutez;
+	}
+	return 0;
+}
+
 export const NETWORKS = {
 	mainnet: {
 		rpcUrl: 'https://mainnet.tezos.ecadinfra.com',

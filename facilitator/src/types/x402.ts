@@ -83,6 +83,10 @@ export interface DecodedTransaction {
   storage_limit: string;
   amount: string;
   destination: string;
+  parameters?: {
+    entrypoint: string;
+    value: unknown;
+  };
 }
 
 export interface DecodedOperation {
