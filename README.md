@@ -2,43 +2,9 @@
 
 A Model Context Protocol server for Tezos with x402 payment support.
 
-> **Warning:** This MCP is in alpha. Most things should work, but please be prepared for troubleshooting. Please report any problems on our [issues page](https://github.com/ecadlabs/TezosX-mcp/issues).
+> **Warning:** This MCP is in beta. Most things should work, but please be prepared for troubleshooting. Please report any problems on our [issues page](https://github.com/ecadlabs/TezosX-mcp/issues).
 >
 > As always, verify the output of your LLM before approving any transactions. Set reasonable limits. Trust but verify.
-
-## Quick Deploy
-
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/tezosx-mcp?referralCode=SVg46H&utm_medium=integration&utm_source=template&utm_campaign=generic)
-<details>
-<summary>Railway deployment steps</summary>
-
-1. Deploy the template (set `TEZOS_NETWORK` to `shadownet` before clicking deploy if desired)
-2. Click the deployed item and go to "Settings"
-3. Scroll down to "Public Networking"
-4. Your domain will be something like `tezosx-mcp-production-a12b.up.railway.app`
-5. Navigate to your domain to open the frontend config, and set up your spending key and contract address
-6. Back on Railway, navigate to the "Variables" tab and set `SPENDING_PRIVATE_KEY` and `SPENDING_CONTRACT` to the values you received
-7. Optional: Enable the 'serverless' setting to reduce resource usage
-8. Restart the deployment
-9. Set up your AI Platform to use `[your domain]/mcp` as the URL
-
-</details>
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ecadlabs/TezosX-mcp)
-<details>
-<summary>Render deployment steps</summary>
-
-1. Click the button above to deploy the template
-2. Once deployed, under "Sync" click "View details"
-3. Click the hyperlink to "tezosx-mcp"
-4. Navigate to your onrender.com custom URL and set up your spending key and contract address
-5. Back on Render, navigate to the "Environment" tab and set `SPENDING_PRIVATE_KEY` and `SPENDING_CONTRACT` environment variables
-6. Click "Manual deploy" at the top right and select "Restart service"
-7. Set up your AI Platform to use `[your domain]/mcp` as the URL
-
-Note: Render spins down free plan services during inactivity. The next request can take up to a minute while the instance spins back up. Upgrade to a paid plan to avoid this.
-
-</details>
 
 ## Components
 
@@ -55,35 +21,95 @@ Note: Render spins down free plan services during inactivity. The next request c
 
 ### Installation
 
-```bash
-npm install @ecadlabs/tezosx-mcp
-```
+<details>
+<summary><strong>Local (npx)</strong> — fastest</summary>
 
-Or run directly:
+The quickest path. Run the MCP locally alongside Claude Desktop — a built-in dashboard handles all configuration automatically.
 
-```bash
-npx @ecadlabs/tezosx-mcp
-```
+1. **Add to your Claude Desktop config** (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
-### Claude Desktop Configuration
+   ```json
+   {
+     "mcpServers": {
+       "tezos": {
+         "command": "npx",
+         "args": ["-y", "@ecadlabs/tezosx-mcp"]
+       }
+     }
+   }
+   ```
 
-Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+2. **Restart Claude Desktop.** Open your dashboard at `localhost:13205`, or ask Claude for the link.
 
-```json
-{
-  "mcpServers": {
-    "tezos": {
-      "command": "npx",
-      "args": ["-y", "@ecadlabs/tezosx-mcp"],
-      "env": {
-        "TEZOS_NETWORK": "mainnet"
-      }
-    }
-  }
-}
-```
+3. **Deploy your spending contract.** Connect your wallet, deploy the spending contract, and set your spending limits. Everything else is handled for you.
 
-Or run from source:
+</details>
+
+<details>
+<summary><strong>Self-Hosted</strong> — always on</summary>
+
+Deploy on Railway or Render for a remote MCP that's still entirely under your control and accessible from multiple clients. Requires some manual configuration.
+
+1. **One-click deploy:**
+
+   [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/tezosx-mcp?referralCode=SVg46H&utm_medium=integration&utm_source=template&utm_campaign=generic)
+
+   [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ecadlabs/TezosX-mcp)
+
+2. **Open dashboard & deploy contract.** Visit your deployment URL, connect your wallet, deploy the spending contract, and set your spending limits. Copy the provided spending key and contract address.
+
+3. **Set environment variables on your server:**
+
+   ```
+   SPENDING_PRIVATE_KEY=edsk...
+   SPENDING_CONTRACT=KT1...
+   ```
+
+4. **Point Claude at your MCP:**
+
+   ```json
+   {
+     "mcpServers": {
+       "tezos": {
+         "type": "streamable-http",
+         "url": "https://your-mcp-url.example.com"
+       }
+     }
+   }
+   ```
+
+</details>
+
+<details>
+<summary><strong>Hosted Dashboard</strong> — flexible</summary>
+
+Use our hosted dashboard to deploy your contract and generate keys, but run the MCP server locally. Keys never leave your browser.
+
+1. **Open the [hosted dashboard](https://7687adbb.tezosx-dashboard.pages.dev/).**
+
+2. **Deploy contract & copy credentials.** Connect your wallet, deploy the spending contract, and set your spending limits. Copy the provided spending key and contract address.
+
+3. **Add your copied variables to your Claude config:**
+
+   ```json
+   {
+     "mcpServers": {
+       "tezos": {
+         "command": "npx",
+         "args": ["-y", "@ecadlabs/tezosx-mcp"],
+         "env": {
+           "CONTRACT_ADDRESS": "KT1...",
+           "SPENDING_PRIVATE_KEY": "edsk...",
+         }
+       }
+     }
+   }
+   ```
+
+</details>
+
+<details>
+<summary><strong>From source</strong></summary>
 
 1. Clone the TezosX-mcp repository
 2. In the `/TezosX-mcp/mcp` folder run `npm i && npm run build`
@@ -93,16 +119,13 @@ Or run from source:
   "mcpServers": {
     "tezosx": {
       "command": "node",
-      "args": ["/path/to/TezosX-mcp/mcp/dist/index.js"],
-      "env": {
-        "TEZOS_NETWORK": "mainnet",
-        "SPENDING_CONTRACT": "KT1...",
-        "SPENDING_PRIVATE_KEY": "edsk..."
-      }
+      "args": ["/path/to/TezosX-mcp/mcp/dist/index.js"]
     }
   }
 }
 ```
+
+</details>
 
 ### Environment Variables
 
