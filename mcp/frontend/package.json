@@ -13,10 +13,10 @@
   },
   "dependencies": {
     "@airgap/beacon-sdk": "^4.2.2",
-    "@taquito/beacon-wallet": "^21.0.0",
-    "@taquito/signer": "^21.0.0",
-    "@taquito/taquito": "^21.0.0",
-    "@taquito/utils": "^21.0.0",
+    "@taquito/beacon-wallet": "^24.0.2",
+    "@taquito/signer": "^24.0.2",
+    "@taquito/taquito": "^24.0.2",
+    "@taquito/utils": "^24.0.2",
     "pinia": "^3.0.4",
     "vue": "^3.4.21",
     "vue-router": "^4.6.3"
