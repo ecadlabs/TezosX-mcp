@@ -18,9 +18,9 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@taquito/taquito": "^21.0.0",
-    "@taquito/utils": "^21.0.0",
-    "@taquito/local-forging": "^21.0.0",
+    "@taquito/taquito": "^24.0.2",
+    "@taquito/utils": "^24.0.2",
+    "@taquito/local-forging": "^24.0.2",
     "hono": "^4.6.0"
   },
   "devDependencies": {

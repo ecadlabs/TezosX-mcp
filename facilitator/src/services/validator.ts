@@ -7,9 +7,9 @@
 
 import {
   verifySignature,
-  b58cencode,
-  b58cdecode,
-  prefix,
+  b58Encode,
+  b58DecodeAndCheckPrefix,
+  PrefixV2,
   getPkhfromPk,
 } from '@taquito/utils';
 import { hash } from '@stablelib/blake2b';
@@ -63,7 +63,7 @@ function computeOperationHash(operationBytes: string): string {
   // of the operation bytes with the 'o' prefix
   const bytes = hexToBytes(operationBytes);
   const hashed = hash(bytes, 32);
-  return b58cencode(hashed, prefix.o);
+  return b58Encode(hashed, PrefixV2.OperationHash);
 }
 
 /**
@@ -326,13 +326,13 @@ export function combineOperationWithSignature(
   let sigBytes: Uint8Array;
 
   if (signature.startsWith('edsig')) {
-    sigBytes = b58cdecode(signature, prefix.edsig);
+    sigBytes = b58DecodeAndCheckPrefix(signature, [PrefixV2.Ed25519Signature], true);
   } else if (signature.startsWith('spsig')) {
-    sigBytes = b58cdecode(signature, prefix.spsig);
+    sigBytes = b58DecodeAndCheckPrefix(signature, [PrefixV2.Secp256k1Signature], true);
   } else if (signature.startsWith('p2sig')) {
-    sigBytes = b58cdecode(signature, prefix.p2sig);
+    sigBytes = b58DecodeAndCheckPrefix(signature, [PrefixV2.P256Signature], true);
   } else if (signature.startsWith('sig')) {
-    sigBytes = b58cdecode(signature, prefix.sig);
+    sigBytes = b58DecodeAndCheckPrefix(signature, [PrefixV2.GenericSignature], true);
   } else {
     throw new Error(`Unsupported signature format: ${signature.substring(0, 10)}`);
   }

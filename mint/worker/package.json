@@ -15,8 +15,8 @@
 		"wrangler": "^4.51.0"
 	},
 	"dependencies": {
-		"@taquito/signer": "^21.0.0",
-		"@taquito/taquito": "^21.0.0",
-		"@taquito/utils": "^21.0.0"
+		"@taquito/signer": "^24.0.2",
+		"@taquito/taquito": "^24.0.2",
+		"@taquito/utils": "^24.0.2"
 	}
 }

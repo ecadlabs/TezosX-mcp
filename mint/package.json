@@ -7,8 +7,8 @@
     "deploy": "tsx compile.ts --deploy"
   },
   "dependencies": {
-    "@taquito/signer": "^21.0.0",
-    "@taquito/taquito": "^21.0.0",
+    "@taquito/signer": "^24.0.2",
+    "@taquito/taquito": "^24.0.2",
     "dotenv": "^16.4.5",
     "tsx": "^4.21.0"
   },

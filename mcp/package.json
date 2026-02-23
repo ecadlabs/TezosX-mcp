@@ -53,8 +53,9 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.23.0",
-    "@taquito/signer": "^23.0.3",
-    "@taquito/taquito": "^23.0.3",
+    "@taquito/signer": "^24.0.2",
+    "@taquito/taquito": "^24.0.2",
+    "@taquito/utils": "^24.0.2",
     "axios": "^1.13.2",
     "bn.js": "^5.2.2",
     "conf": "^15.1.0",

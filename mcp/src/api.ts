@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { InMemorySigner } from '@taquito/signer';
-import { b58cencode, prefix } from '@taquito/utils';
+import { b58Encode, PrefixV2 } from '@taquito/utils';
 import { randomBytes } from 'crypto';
 import { LiveConfig, configureLiveConfig, resetLiveConfig, type NetworkName, NETWORKS } from './live-config.js';
 import { savePendingKey, loadPendingKey, activatePendingKey, saveContract, clearConfig, loadConfig } from './config-store.js';
@@ -39,7 +39,7 @@ function localhostGuard(req: Request, res: Response, next: NextFunction): void {
 
 async function generateKeypair(): Promise<{ address: string; publicKey: string; secretKey: string }> {
 	const seed = randomBytes(32);
-	const secretKey = b58cencode(seed, prefix.edsk2);
+	const secretKey = b58Encode(seed, PrefixV2.Ed25519Seed);
 	const signer = await InMemorySigner.fromSecretKey(secretKey);
 	const publicKey = await signer.publicKey();
 	const address = await signer.publicKeyHash();

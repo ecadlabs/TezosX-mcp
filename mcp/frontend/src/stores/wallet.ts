@@ -72,12 +72,7 @@ export const useWalletStore = defineStore('wallet', () => {
         throw new Error('Wallet not initialized')
       }
 
-      const network = currentNetwork.value
-      const beaconNetwork = getBeaconNetworkConfig(network)
-
-      await wallet.value.requestPermissions({
-        network: beaconNetwork as any,
-      })
+      await wallet.value.requestPermissions()
 
       const address = await wallet.value.getPKH()
       userAddress.value = address
