@@ -9,13 +9,13 @@ export const createFetchWithX402Tool = (config: LiveConfig) => ({
 	name: "tezos_fetch_with_x402",
 	config: {
 		title: "Fetch with x402 Payment",
-		description: "Fetches a URL and automatically handles x402 payment requirements. If the server returns 402, it parses the requirements, creates a signed payment, and retries the request with the X-PAYMENT header. WARNING: For NFT minting endpoints (URLs containing '/mint' or otherwise going to a minter), you MUST set 'nftRecipientAddress' to the user's wallet address, otherwise the NFT will be sent to the spender account instead of the user.",
+		description: "Fetches a URL and automatically handles x402 payment requirements. If the server returns 402, it parses the requirements, creates a signed payment, and retries the request with the X-PAYMENT header. Use 'queryParams' to pass dynamic parameters to the endpoint (e.g., for NFT minting, pass {\"recipient\": \"tz1...\"} so the NFT goes to the user's wallet instead of the spender account).",
 		inputSchema: z.object({
 			url: z.string().describe("The URL to fetch"),
 			maxAmountMutez: z.string().describe("Maximum amount in mutez willing to pay (e.g., '500000' for 0.5 XTZ)"),
 			method: z.string().optional().describe("HTTP method (default: GET)"),
-			body: z.string().optional().describe("Request body for POST/PUT requests"),
-			nftRecipientAddress: z.string().optional().describe("REQUIRED FOR MINTING: The user's wallet address (tz1...) to receive minted NFTs. If omitted, NFTs go to the spender account, not the user."),
+			body: z.string().optional().describe("Request body for POST/PUT requests (JSON string)"),
+			queryParams: z.string().optional().describe("JSON object of query parameters to append to the URL (e.g., '{\"recipient\": \"tz1...\", \"amount\": \"100\"}')"),
 		}),
 		annotations: {
 			readOnlyHint: false,
@@ -26,12 +26,12 @@ export const createFetchWithX402Tool = (config: LiveConfig) => ({
 	},
 	handler: async (params: any) => {
 		const { Tezos } = config;
-		const { url, maxAmountMutez, method = "GET", body, nftRecipientAddress } = params as {
+		const { url, maxAmountMutez, method = "GET", body, queryParams } = params as {
 			url: string;
 			maxAmountMutez: string;
 			method?: string;
 			body?: string;
-			nftRecipientAddress?: string;
+			queryParams?: string;
 		};
 
 		const maxAmount = parseInt(maxAmountMutez, 10);
@@ -39,12 +39,21 @@ export const createFetchWithX402Tool = (config: LiveConfig) => ({
 			throw new Error(`Invalid maxAmountMutez: ${maxAmountMutez}. Must be a positive integer.`);
 		}
 
-		// Build URL with recipient parameter if specified
+		// Build URL with query parameters if specified
 		let requestUrl = url;
-		if (nftRecipientAddress) {
-			const urlObj = new URL(url);
-			urlObj.searchParams.set("recipient", nftRecipientAddress);
-			requestUrl = urlObj.toString();
+		if (queryParams) {
+			try {
+				const parsed = JSON.parse(queryParams);
+				if (typeof parsed === "object" && parsed !== null) {
+					const urlObj = new URL(url);
+					for (const [key, value] of Object.entries(parsed)) {
+						urlObj.searchParams.set(key, String(value));
+					}
+					requestUrl = urlObj.toString();
+				}
+			} catch {
+				throw new Error(`Invalid queryParams: must be a valid JSON object (e.g., '{"key": "value"}')`);
+			}
 		}
 
 		// Initial request config
