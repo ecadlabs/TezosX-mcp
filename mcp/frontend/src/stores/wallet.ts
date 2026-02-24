@@ -90,8 +90,9 @@ export const useWalletStore = defineStore('wallet', () => {
   async function disconnect(): Promise<void> {
     if (wallet.value) {
       await wallet.value.clearActiveAccount()
-      userAddress.value = null
     }
+    userAddress.value = null
+    tezos.value = null
   }
 
   async function switchNetwork(newNetworkId: NetworkId): Promise<void> {
