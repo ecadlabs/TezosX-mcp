@@ -52,12 +52,12 @@ const init = async () => {
 	// Create shared mutable config
 	const liveConfig = createLiveConfig(networkName);
 
-	// Try to load config: persistent store first, then env vars
+	// Try to load config: env vars first, then persistent store
 	const stored = loadConfig();
-	const privateKey = stored.spendingPrivateKey?.trim() || process.env.SPENDING_PRIVATE_KEY?.trim();
-	const spendingContract = stored.spendingContract?.trim() || process.env.SPENDING_CONTRACT?.trim();
+	const privateKey = process.env.SPENDING_PRIVATE_KEY?.trim() || stored.spendingPrivateKey?.trim();
+	const spendingContract = process.env.SPENDING_CONTRACT?.trim() || stored.spendingContract?.trim();
 	const storedNetwork = stored.network && stored.network in NETWORKS ? stored.network as NetworkName : undefined;
-	const configNetwork = storedNetwork || networkName;
+	const configNetwork = networkName || storedNetwork;
 
 	if (privateKey && spendingContract) {
 		if (!isValidPrivateKey(privateKey)) {
