@@ -12,6 +12,7 @@ import ContractInfo from './components/ContractInfo.vue'
 import SpendingLimits from './components/SpendingLimits.vue'
 import SpenderManagement from './components/SpenderManagement.vue'
 import WithdrawFunds from './components/WithdrawFunds.vue'
+import ToolGuide from './components/ToolGuide.vue'
 
 const walletStore = useWalletStore()
 const contractStore = useContractStore()
@@ -116,6 +117,7 @@ onMounted(async () => {
       <!-- Contract Dashboard -->
       <template v-if="contractStore.contractAddress && contractStore.storage">
         <ContractInfo />
+        <ToolGuide />
         <SpendingLimits />
         <SpenderManagement v-if="contractStore.isOwner" />
         <WithdrawFunds v-if="contractStore.isOwner" />
