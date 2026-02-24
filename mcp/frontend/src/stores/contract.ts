@@ -8,7 +8,7 @@ import CONTRACT_CODE from '../../contract/spending-limited-wallet.tz?raw'
 
 export interface DeploymentResult {
   contractAddress: string
-  /** Only present in remote mode — keypair generated client-side */
+  /** Spending key shown to the user after deployment */
   spendingKey?: string
   /** True when the on-chain deploy succeeded but saving config to the server failed */
   configSaveFailed?: boolean
