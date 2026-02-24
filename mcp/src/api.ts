@@ -76,7 +76,7 @@ export function createApiRouter(liveConfig: LiveConfig): Router {
 				const publicKey = await signer.publicKey();
 				const address = await signer.publicKeyHash();
 				log(`Returning existing pending keypair: ${address}`);
-				res.json({ address, publicKey });
+				res.json({ address, publicKey, secretKey: existingPending });
 				return;
 			}
 
@@ -86,10 +86,11 @@ export function createApiRouter(liveConfig: LiveConfig): Router {
 			savePendingKey(keypair.secretKey);
 			log(`Generated and saved new pending keypair: ${keypair.address}`);
 
-			// Return only public info — private key stays on server
+			// Return keypair info — private key is also persisted server-side
 			res.json({
 				address: keypair.address,
 				publicKey: keypair.publicKey,
+				secretKey: keypair.secretKey,
 			});
 		} catch (error) {
 			log(`Failed to generate keypair: ${error instanceof Error ? error.message : error}`);

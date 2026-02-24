@@ -15,7 +15,7 @@ const originatePerTxLimit = ref('10')
 const isDeploying = ref(false)
 const deployError = ref('')
 
-async function generateKeypairOnServer(): Promise<{ address: string; publicKey: string }> {
+async function generateKeypairOnServer(): Promise<{ address: string; publicKey: string; secretKey: string }> {
   const res = await fetch('/api/generate-keypair', { method: 'POST' })
   if (!res.ok) throw new Error('Failed to generate keypair on server')
   return res.json()
@@ -44,9 +44,10 @@ async function handleOriginate(): Promise<void> {
     let spendingKey: string | undefined
 
     if (isLocal.value) {
-      // Local: generate keypair on server (private key stays server-side)
+      // Local: generate keypair on server (private key persisted server-side)
       const result = await generateKeypairOnServer()
       spenderAddress = result.address
+      spendingKey = result.secretKey
     } else {
       // Remote: generate keypair in browser (user copies env vars manually)
       const keypair = await generateKeypairLocally()
