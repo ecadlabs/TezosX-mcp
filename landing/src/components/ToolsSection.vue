@@ -9,6 +9,7 @@ const tools = [
   'tezos_get_limits',
   'tezos_get_operation_history',
   'tezos_get_addresses',
+  'tezos_recover_spender_funds',
   'tezos_reveal_account',
   'tezos_get_dashboard',
   'tezos_parse_x402_requirements',

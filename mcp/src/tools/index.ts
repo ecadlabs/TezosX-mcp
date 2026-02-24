@@ -7,6 +7,7 @@ import { createGetLimitsTool } from "./get_limits.js";
 import { createGetOperationHistoryTool } from "./get_operation_history.js";
 import { createParseX402RequirementsTool } from "./parse_x402_requirements.js";
 import { createRevealAccountTool } from "./reveal_account.js";
+import { createRecoverSpenderFundsTool } from "./recover_spender_funds.js";
 import { createSendXtzTool } from "./send_xtz.js";
 import { createGetDashboardTool } from "./get_dashboard.js";
 
@@ -47,6 +48,7 @@ export const createTools = (liveConfig: LiveConfig, http: boolean) => {
 		createGetLimitsTool(liveConfig),
 		createGetOperationHistoryTool(liveConfig),
 		createParseX402RequirementsTool(),
+		createRecoverSpenderFundsTool(liveConfig),
 		createRevealAccountTool(liveConfig),
 		createSendXtzTool(liveConfig),
 	];
