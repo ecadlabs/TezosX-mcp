@@ -18,7 +18,8 @@ export const createRecoverSpenderFundsTool = (config: LiveConfig) => ({
 		title: "Recover Spender Gas Funds",
 		description:
 			"Transfers the spender address's XTZ balance (used for gas fees) to the contract owner or a specified address. " +
-			"Useful for recovering funds when decommissioning a spender or rebalancing.",
+			"Useful for recovering funds when decommissioning a spender or rebalancing. " +
+			"Always fetches the live on-chain balance — call this tool every time the user asks, even if a previous call returned zero.",
 		inputSchema,
 		annotations: {
 			readOnlyHint: false,
