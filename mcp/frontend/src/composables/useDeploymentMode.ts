@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 
 const isLocal = ref<boolean | null>(null)
+const serverNetwork = ref<string | null>(null)
 let checkPromise: Promise<void> | null = null
 
 async function detectMode(): Promise<void> {
@@ -13,6 +14,9 @@ async function detectMode(): Promise<void> {
       // Parse as JSON — if it's an SPA fallback (HTML), this throws
       const data = await res.json()
       isLocal.value = res.ok && typeof data.configured === 'boolean'
+      if (data.network) {
+        serverNetwork.value = data.network
+      }
     } catch {
       isLocal.value = false
     }
@@ -26,6 +30,7 @@ export function useDeploymentMode() {
     isLocal,
     isRemote: computed(() => isLocal.value === false),
     ready: computed(() => isLocal.value !== null),
+    serverNetwork,
     detectMode,
   }
 }

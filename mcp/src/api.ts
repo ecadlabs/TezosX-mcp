@@ -58,6 +58,7 @@ export function createApiRouter(liveConfig: LiveConfig): Router {
 			configured: liveConfig.configured,
 			spenderAddress: liveConfig.spendingAddress || undefined,
 			contractAddress: liveConfig.spendingContract || undefined,
+			network: liveConfig.networkName,
 		});
 	});
 
