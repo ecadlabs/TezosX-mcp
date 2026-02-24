@@ -19,7 +19,9 @@ export const startWebServer = (port: number, apiRouter?: Router) => {
 	app.use(sirv(distPath, { single: true }));
 
 	let retries = 0;
-	const maxRetries = 3;
+	const maxRetries = 5;
+	const retryDelay = 1000;
+	let activeServer: ReturnType<typeof app.listen> | null = null;
 
 	const tryListen = () => {
 		const server = app.listen(port);
@@ -27,20 +29,29 @@ export const startWebServer = (port: number, apiRouter?: Router) => {
 			if (err.code === "EADDRINUSE" && retries < maxRetries) {
 				retries++;
 				console.error(`[tezosx-mcp] Port ${port} in use, retrying (${retries}/${maxRetries})...`);
-				setTimeout(tryListen, 500);
+				setTimeout(tryListen, retryDelay);
 			} else if (err.code === "EADDRINUSE") {
-				console.error(`[tezosx-mcp] Port ${port} in use, frontend dashboard unavailable`);
+				console.error(`[tezosx-mcp] Port ${port} still in use after ${maxRetries} retries, frontend dashboard unavailable`);
 			} else {
 				console.error(`[tezosx-mcp] Web server error:`, err.message);
 			}
 		});
 		server.on("listening", () => {
-			const shutdown = () => server.close();
-			process.on("SIGTERM", shutdown);
-			process.on("SIGINT", shutdown);
-			process.on("exit", shutdown);
+			activeServer = server;
+			console.error(`[tezosx-mcp] Dashboard running on http://localhost:${port}`);
 		});
 	};
+
+	// Ensure the server is fully closed before the process exits
+	const shutdown = () => {
+		if (activeServer) {
+			activeServer.closeAllConnections();
+			activeServer.close();
+			activeServer = null;
+		}
+	};
+	process.on("SIGTERM", () => { shutdown(); process.exit(0); });
+	process.on("SIGINT", () => { shutdown(); process.exit(0); });
 
 	tryListen();
 };
