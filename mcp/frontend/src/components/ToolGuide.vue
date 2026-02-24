@@ -44,12 +44,12 @@ const toolGroups = [
       },
       {
         name: 'tezos_create_x402_payment',
-        desc: 'Create a signed x402 payment header without broadcasting.',
+        desc: 'Create a signed x402 payment header without broadcasting. Internal tool.',
         example: 'Create an x402 payment of 500000 mutez to tz1abc...',
       },
       {
         name: 'tezos_parse_x402_requirements',
-        desc: 'Parse payment requirements from a 402 response body.',
+        desc: 'Parse payment requirements from a 402 response body. Internal tool.',
         example: 'Parse these x402 payment requirements',
       },
     ],
@@ -60,11 +60,11 @@ const toolGroups = [
       {
         name: 'tezos_recover_spender_funds',
         desc: 'Transfer the spender address\'s XTZ balance back to the owner.',
-        example: 'Recover funds from the spender address',
+        example: 'Drain the spender address to my account',
       },
       {
         name: 'tezos_reveal_account',
-        desc: 'Reveal the spender account on-chain. Required before first use.',
+        desc: 'Reveal the spender account on-chain. Internal tool.',
         example: 'Reveal my account',
       },
       {
@@ -78,61 +78,51 @@ const toolGroups = [
 </script>
 
 <template>
-  <section id="tools" class="max-w-[1100px] mx-auto px-7 pt-[60px] pb-[70px] border-t border-border max-md:px-5">
-    <!-- Header with toggle -->
-    <div class="text-center mb-8">
-      <h2 class="text-4xl font-bold tracking-[-0.04em] text-text-primary mb-3">Available Tools</h2>
-      <p class="text-text-muted text-[14.5px] leading-[1.7] max-w-[520px] mx-auto">
-        Your agent gets access to {{ toolGroups.reduce((n, g) => n + g.tools.length, 0) }} tools.
-        Ask in plain language — the LLM picks the right one.
-      </p>
-    </div>
-
-    <!-- Collapsible toggle -->
+  <section class="card mb-5 overflow-hidden">
+    <!-- Toggle header -->
     <button
       @click="open = !open"
-      class="mx-auto flex items-center gap-2 px-5 py-2.5 rounded-lg border transition-all duration-300 cursor-pointer font-sans text-[13px] font-medium"
-      :class="open
-        ? 'bg-accent/[0.08] border-accent/25 text-accent'
-        : 'bg-white/[0.03] border-white/[0.06] text-text-muted hover:border-white/[0.12] hover:text-text-secondary'"
+      class="w-full flex items-center justify-between px-5 py-4 cursor-pointer bg-transparent border-none text-left transition-colors hover:bg-primary-50/50"
     >
+      <p class="section-label !mb-0">tool reference</p>
       <svg
         width="16" height="16" viewBox="0 0 24 24" fill="none"
         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-        class="transition-transform duration-300"
-        :class="open ? 'rotate-90' : ''"
+        class="text-text-muted transition-transform duration-200"
+        :class="open ? 'rotate-180' : ''"
       >
-        <polyline points="9 18 15 12 9 6" />
+        <polyline points="6 9 12 15 18 9" />
       </svg>
-      {{ open ? 'Hide tool reference' : 'Show tool reference' }}
     </button>
 
     <!-- Collapsible content -->
     <div
-      class="grid transition-[grid-template-rows] duration-400 ease-[cubic-bezier(0.16,1,0.3,1)]"
+      class="grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
       :class="open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'"
     >
       <div class="overflow-hidden">
-        <div class="pt-8 flex flex-col gap-7">
-          <div v-for="group in toolGroups" :key="group.label">
+        <div class="px-5 pb-5">
+          <p class="text-xs text-text-muted mb-4">
+            Call tools by asking your AI agent to do things in plain language. Tools marked as internal are automatically called in conjunction with other tools, but can also be called manually.
+          </p>
+
+          <div v-for="(group, gi) in toolGroups" :key="group.label" :class="gi > 0 ? 'mt-4' : ''">
             <!-- Group label -->
-            <div class="flex items-center gap-3 mb-3.5">
-              <span class="font-mono text-[11px] uppercase tracking-[0.06em] text-text-faint">{{ group.label }}</span>
-              <div class="flex-1 h-px bg-white/[0.04]"></div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="label !mb-0 !text-[11px] uppercase tracking-wider text-text-muted font-medium">{{ group.label }}</span>
+              <div class="flex-1 h-px bg-primary-200"></div>
             </div>
 
             <!-- Tool rows -->
-            <div class="flex flex-col gap-2">
+            <div class="space-y-1.5">
               <div
                 v-for="tool in group.tools"
                 :key="tool.name"
-                class="grid grid-cols-[200px_1fr_1fr] gap-4 items-baseline px-4 py-3 rounded-lg bg-white/[0.015] border border-white/[0.03] max-md:grid-cols-1 max-md:gap-1.5"
+                class="card-subtle px-3 py-2.5 grid grid-cols-[160px_1fr] gap-3 items-baseline sm:grid-cols-[170px_1fr_1fr]"
               >
-                <span class="font-mono text-[12.5px] text-accent/80">{{ tool.name }}</span>
-                <span class="text-[13px] text-text-dim leading-[1.5]">{{ tool.desc }}</span>
-                <span class="text-[12.5px] text-text-faint italic max-md:pl-0">
-                  "{{ tool.example }}"
-                </span>
+                <span class="mono text-xs text-accent-600 truncate">{{ tool.name }}</span>
+                <span class="text-xs text-text-secondary leading-relaxed">{{ tool.desc }}</span>
+                <span class="text-xs text-text-muted italic hidden sm:block">"{{ tool.example }}"</span>
               </div>
             </div>
           </div>
