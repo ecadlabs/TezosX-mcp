@@ -15,7 +15,7 @@ import WithdrawFunds from './components/WithdrawFunds.vue'
 
 const walletStore = useWalletStore()
 const contractStore = useContractStore()
-const { detectMode } = useDeploymentMode()
+const { detectMode, serverNetwork } = useDeploymentMode()
 
 const networkOptions = Object.entries(NETWORKS).map(([id, config]) => ({
   id: id as NetworkId,
@@ -29,14 +29,20 @@ async function handleNetworkChange(event: Event): Promise<void> {
 }
 
 onMounted(async () => {
-  detectMode()
+  await detectMode()
 
   const params = new URLSearchParams(window.location.search)
 
-  // Handle network param before wallet init
+  // Sync network: URL param > server network > localStorage default
   const networkParam = params.get('network')?.toLowerCase()
-  if (networkParam && networkParam in NETWORKS) {
-    await walletStore.switchNetwork(networkParam as NetworkId)
+  const targetNetwork = networkParam && networkParam in NETWORKS
+    ? networkParam
+    : serverNetwork.value && serverNetwork.value in NETWORKS
+      ? serverNetwork.value
+      : null
+
+  if (targetNetwork && targetNetwork !== walletStore.networkId) {
+    await walletStore.switchNetwork(targetNetwork as NetworkId)
   }
 
   await walletStore.init()

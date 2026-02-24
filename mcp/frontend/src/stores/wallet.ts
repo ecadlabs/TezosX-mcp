@@ -97,20 +97,32 @@ export const useWalletStore = defineStore('wallet', () => {
   async function switchNetwork(newNetworkId: NetworkId): Promise<void> {
     if (newNetworkId === networkId.value) return
 
-    // Disconnect and reset state
+    // Clear active account
     if (wallet.value) {
       await wallet.value.clearActiveAccount()
     }
-    tezos.value = null
-    wallet.value = null
     userAddress.value = null
 
-    // Update network
+    // Update network selection (must happen before init so currentNetwork is correct)
     networkId.value = newNetworkId
     setSelectedNetworkId(newNetworkId)
 
-    // Reinitialize with new network
-    await init()
+    const network = currentNetwork.value
+
+    // Ensure wallet exists (first call creates the Beacon singleton)
+    if (!wallet.value) {
+      tezos.value = null
+      await init()
+      return
+    }
+
+    // Update Tezos toolkit to point at new RPC
+    tezos.value = new TezosToolkit(network.rpcUrl)
+
+    // Mutate the Beacon singleton's network directly — BeaconWallet uses a
+    // module-level singleton DAppClient so recreating BeaconWallet won't help
+    wallet.value.client.network = getBeaconNetworkConfig(network) as any
+    tezos.value.setWalletProvider(wallet.value)
   }
 
   async function getBalance(address: string): Promise<number> {

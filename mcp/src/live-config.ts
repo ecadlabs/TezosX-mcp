@@ -6,6 +6,7 @@ export interface LiveConfig {
 	spendingContract: string;
 	spendingAddress: string;
 	tzktApi: string;
+	networkName: NetworkName;
 	configured: boolean;
 }
 
@@ -48,6 +49,7 @@ export function createLiveConfig(networkName: NetworkName): LiveConfig {
 		spendingContract: '',
 		spendingAddress: '',
 		tzktApi: network.tzktApi,
+		networkName,
 		configured: false,
 	};
 }
@@ -66,6 +68,7 @@ export async function configureLiveConfig(
 		const network = NETWORKS[networkName];
 		config.Tezos = new TezosToolkit(network.rpcUrl);
 		config.tzktApi = network.tzktApi;
+		config.networkName = networkName;
 	}
 
 	const signer = await InMemorySigner.fromSecretKey(privateKey);
@@ -85,6 +88,7 @@ export function resetLiveConfig(config: LiveConfig, networkName?: NetworkName): 
 	config.Tezos = new TezosToolkit(rpcUrl);
 	if (networkName) {
 		config.tzktApi = NETWORKS[networkName].tzktApi;
+		config.networkName = networkName;
 	}
 	config.spendingContract = '';
 	config.spendingAddress = '';

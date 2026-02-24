@@ -1,11 +1,8 @@
 name: Deploy websites
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'mcp/frontend/**'
-      - 'landing/**'
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:
