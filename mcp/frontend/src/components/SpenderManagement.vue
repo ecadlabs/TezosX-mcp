@@ -150,7 +150,7 @@ function handleDone(): void {
       <div v-else class="mb-3">
         <p class="text-sm text-amber-700 mb-3">
           Update the <code class="mono text-xs bg-amber-100 px-1 py-0.5 rounded">SPENDING_PRIVATE_KEY</code>
-          environment variable on your MCP server with the new key below.
+          environment variable on your MCP server with the new key below and restart Claude Desktop.
           The key won't be shown again after you leave this page.
         </p>
         <div>
