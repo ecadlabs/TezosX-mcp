@@ -1,5 +1,5 @@
 { parameter
-    (or (unit %default_)
+    (or (unit %default)
         (or (pair %withdraw (address %recipient) (mutez %amount))
             (or (pair %set_limits (mutez %new_daily_limit) (mutez %new_per_tx_limit))
                 (or (address %set_spender)
