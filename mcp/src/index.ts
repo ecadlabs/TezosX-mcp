@@ -42,8 +42,14 @@ const log = (msg: string) => console.error(`[tezosx-mcp] ${msg}`);
 const init = async () => {
 	log('Starting server...');
 
-	// Determine network
-	const networkName = (process.env.TEZOS_NETWORK || 'mainnet') as NetworkName;
+	// Try to load config: env vars first, then persistent store
+	const stored = loadConfig();
+	const privateKey = process.env.SPENDING_PRIVATE_KEY?.trim() || stored.spendingPrivateKey?.trim();
+	const spendingContract = process.env.SPENDING_CONTRACT?.trim() || stored.spendingContract?.trim();
+	const storedNetwork = stored.network && stored.network in NETWORKS ? stored.network as NetworkName : undefined;
+
+	// Determine network: env var > stored config > mainnet
+	const networkName = (process.env.TEZOS_NETWORK || storedNetwork || 'mainnet') as NetworkName;
 	if (!(networkName in NETWORKS)) {
 		throw new ReferenceError(`Invalid network: ${networkName}. Valid options: ${Object.keys(NETWORKS).join(', ')}`);
 	}
@@ -52,19 +58,12 @@ const init = async () => {
 	// Create shared mutable config
 	const liveConfig = createLiveConfig(networkName);
 
-	// Try to load config: env vars first, then persistent store
-	const stored = loadConfig();
-	const privateKey = process.env.SPENDING_PRIVATE_KEY?.trim() || stored.spendingPrivateKey?.trim();
-	const spendingContract = process.env.SPENDING_CONTRACT?.trim() || stored.spendingContract?.trim();
-	const storedNetwork = stored.network && stored.network in NETWORKS ? stored.network as NetworkName : undefined;
-	const configNetwork = networkName || storedNetwork;
-
 	if (privateKey && spendingContract) {
 		if (!isValidPrivateKey(privateKey)) {
 			log('Warning: Invalid private key format. Must start with edsk, spsk, or p2sk. Wallet not configured.');
 		} else {
 			try {
-				const spendingAddress = await configureLiveConfig(liveConfig, privateKey, spendingContract, configNetwork);
+				const spendingAddress = await configureLiveConfig(liveConfig, privateKey, spendingContract, networkName);
 				log(`Wallet configured: ${spendingAddress}`);
 				if (stored.spendingPrivateKey) {
 					log('Config loaded from persistent store');
