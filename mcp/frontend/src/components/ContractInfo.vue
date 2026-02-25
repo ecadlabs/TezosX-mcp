@@ -104,13 +104,13 @@ async function executeFundContract(includeSpenderTopUp: boolean): Promise<void> 
   try {
     if (includeSpenderTopUp) {
       const batch = walletStore.tezos.wallet.batch()
-        .withTransfer(contractStore.contract.methodsObject.default_(null).toTransferParams({ amount: pendingFundAmount.value }))
+        .withTransfer(contractStore.contract.methodsObject["default"](null).toTransferParams({ amount: pendingFundAmount.value }))
         .withTransfer({ to: contractStore.storage!.spender, amount: 0.5 })
       const op = await batch.send()
       await op.confirmation()
       await fetchSpenderBalance()
     } else {
-      const op = await contractStore.contract.methodsObject.default_(null).send({ amount: pendingFundAmount.value })
+      const op = await contractStore.contract.methodsObject["default"](null).send({ amount: pendingFundAmount.value })
       await op.confirmation()
     }
 

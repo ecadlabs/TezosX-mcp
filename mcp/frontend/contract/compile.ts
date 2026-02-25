@@ -15,6 +15,7 @@
  */
 
 import { execSync } from "child_process";
+import { readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 
@@ -32,6 +33,12 @@ try {
       stdio: "inherit",
       cwd: __dirname,
     });
+
+  // LIGO emits %default_ (with trailing underscore) because `default` is a
+  // reserved word in JsLIGO. Michelson requires %default (no underscore) for
+  // the implicit default entrypoint, so we fix it up after compilation.
+  const tz = readFileSync(output, "utf-8");
+  writeFileSync(output, tz.replace("%default_", "%default"));
 } catch (error) {
   throw new Error(`${error}`);
 }

@@ -67,7 +67,7 @@ export const createRecoverSpenderFundsTool = (config: LiveConfig) => ({
 
 		if (isContract) {
 			const contract = await Tezos.contract.at(destination);
-			const depositCall = contract.methodsObject.default_(null);
+			const depositCall = contract.methodsObject["default"](null);
 			const estimate = await Tezos.estimate.contractCall(depositCall);
 
 			const maxAmount = balanceMutez - estimate.suggestedFeeMutez;
@@ -80,7 +80,7 @@ export const createRecoverSpenderFundsTool = (config: LiveConfig) => ({
 				};
 			}
 
-			const operation = await contract.methodsObject.default_(null).send({
+			const operation = await contract.methodsObject["default"](null).send({
 				amount: maxAmount,
 				mutez: true,
 				fee: estimate.suggestedFeeMutez,
