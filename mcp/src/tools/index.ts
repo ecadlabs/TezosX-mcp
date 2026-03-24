@@ -11,6 +11,7 @@ import { createRecoverSpenderFundsTool } from "./recover_spender_funds.js";
 import { createSendXtzTool } from "./send_xtz.js";
 import { createBridgeToEtherlinkTool } from "./bridge_to_etherlink.js";
 import { createBridgeStatusTool } from "./bridge_status.js";
+import { createBridgeExecuteWithdrawalTool } from "./bridge_execute_withdrawal.js";
 import { createGetDashboardTool } from "./get_dashboard.js";
 
 const getNotConfiguredMessage = () => `Wallet not configured.
@@ -55,6 +56,7 @@ export const createTools = (liveConfig: LiveConfig, http: boolean) => {
 		createSendXtzTool(liveConfig),
 		createBridgeToEtherlinkTool(liveConfig),
 		createBridgeStatusTool(liveConfig),
+		createBridgeExecuteWithdrawalTool(liveConfig),
 	];
 
 	if (!http) {
